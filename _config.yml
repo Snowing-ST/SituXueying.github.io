@@ -36,7 +36,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   The world is so lonely as snow.
 author: Situ Xueying
 email: situxueying94@foxmail.com
-avatar: assets\images\touxiang.jpg
+avatar: assets/images/touxiang.jpg
 
 # You'll want to customize url and baseurl for your own site:
 baseurl: "" # the subpath of your site, e.g. /blog

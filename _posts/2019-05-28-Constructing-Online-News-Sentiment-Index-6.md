@@ -53,6 +53,6 @@ tensorboard --logdir=run1:“train”,run2:"dev"
 - please see [w2v_CNN_eval.py](https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_CNN_eval.py)
 
 #### 6. text classification with RNN
-- please see [RNN.py](),[RNN_train.py](),which is different from CNN
+- please see [RNN.py](https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_RNN.py),[RNN_train.py](https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_RNN_train.py),which is different from CNN
 
 For more information about this project, please visit my [github](https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index).
