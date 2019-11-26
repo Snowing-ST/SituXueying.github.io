@@ -1,0 +1,17 @@
+I"�<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（三）<br />文本预处理</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-3text-prepossessing">Main step 3:<center>text prepossessing</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>split <code class="highlighter-rouge">all_df.csv</code> into training set and testing set by using stratified sampling according to year and keywords</li>
+  <li>text prepossessing including word segment and removing stop words</li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-split-all_dfcsv-into-training-set-and-testing-set">1. split <code class="highlighter-rouge">all_df.csv</code> into training set and testing set</h4>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

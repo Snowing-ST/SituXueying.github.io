@@ -1,0 +1,212 @@
+I"K�<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（五）<br />深度学习文本分类模型之用word2vec做文本表示</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-5text-classification-with-deep-learning-algorithmtext-representation-using-word2vec">Main step 5:<center>text classification with deep learning algorithm:<br />text representation using word2vec</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>using word2vec pretrained by <a href="https://github.com/Embedding/Chinese-Word-Vectors">Chinese Word Vectors</a></li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-aggregate-all-the-news">1. aggregate all the news</h4>
+<ul>
+  <li>input:<code class="highlighter-rouge">all_df.csv</code> of six classes</li>
+  <li>output: <code class="highlighter-rouge">all_news_title.csv</code> saved in <code class="highlighter-rouge">TRAIN_DATA</code> folder</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">text_preprocess</span> <span class="k">as</span> <span class="n">tp</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="k">def</span> <span class="nf">get_all_news</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">):</span>
+    <span class="s">"""将所有方面的all_df.csv合并"""</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="s">"./raw_data/"</span>
+    <span class="n">aspect</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">all_news_title</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">asp</span> <span class="ow">in</span> <span class="n">aspect</span><span class="p">:</span>
+        <span class="n">subpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">asp</span><span class="p">)</span>
+        <span class="n">temp_df_name</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">subpath</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r"all_df.csv"</span><span class="p">,</span><span class="n">f</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subpath</span><span class="p">,</span><span class="n">temp_df_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">engine</span> <span class="o">=</span>  <span class="s">"python"</span><span class="p">)</span>
+        <span class="n">all_news_title</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">all_news_title</span><span class="p">,</span><span class="n">temp_df</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">all_news_title</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>    
+    <span class="k">return</span> <span class="n">all_news_title</span>
+</code></pre></div></div>
+<h4 id="2-obtain-dictionary-including-all-the-words-in-news">2. obtain dictionary including all the words in news</h4>
+<ul>
+  <li>input:  <code class="highlighter-rouge">all_df.csv</code></li>
+  <li>text prepossessing using function in <code class="highlighter-rouge">text_preprocess.py</code></li>
+  <li>obtain word count frequency, remove low frequency words</li>
+  <li>output:dictionary saved in <code class="highlighter-rouge">DICTIONARY_DIC</code> folder</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+
+<span class="k">def</span> <span class="nf">get_news_dic</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">):</span>
+    <span class="s">"""
+    从所有新闻训练样本得到字典
+    """</span>
+    <span class="n">dic</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#存放词
+</span>    <span class="k">print</span><span class="p">(</span><span class="s">'正在加载字典……'</span><span class="p">)</span>
+    <span class="c1"># 统计数据包总条数
+</span>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">):</span><span class="c1">#如果已有所有新闻生成的词典，则直接读取
+</span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"已存在由所有新闻生成的字典，直接读取"</span><span class="p">)</span>
+            <span class="n">dic</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> 
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"已存在所有新闻合集，直接读取"</span><span class="p">)</span>
+            <span class="n">all_news_title</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">engine</span><span class="o">=</span><span class="s">"python"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">all_news_title</span> <span class="o">=</span> <span class="n">get_all_news</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">)</span>
+        
+        <span class="n">tolal_line_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_news_title</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"共有新闻有</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="p">(</span><span class="n">tolal_line_num</span><span class="p">))</span>
+        <span class="c1">#调用文本预处理函数
+</span>        <span class="n">x_train</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">convert_doc_to_wordlist</span><span class="p">(</span><span class="n">all_news_title</span><span class="p">[</span><span class="s">"title"</span><span class="p">],</span><span class="n">tool</span> <span class="o">=</span> <span class="s">"jieba"</span><span class="p">,</span><span class="n">cut_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">mode</span> <span class="o">=</span><span class="s">"accuracy"</span><span class="p">)</span>
+        <span class="n">whole_text</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">x_train</span><span class="p">:</span>
+            <span class="n">whole_text</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">frequency_dict</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">whole_text</span><span class="p">)</span>    
+<span class="c1">#        frequency_dict = sorted(Counter(whole_text).items(), key = operator.itemgetter(1), reverse=True) #=True 降序排列
+</span>            
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">frequency_dict</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">WORD_FREQUENCY_LOW</span> <span class="o">&lt;</span> <span class="n">frequency_dict</span><span class="p">[</span><span class="n">word</span><span class="p">]:</span><span class="c1">#去掉低频词
+</span>                <span class="n">dic</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span> <span class="s">'wb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">dic</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="c1"># 把所有新闻的字典保存入文件
+</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">'字典加载完成,去除低频词后字典长度为</span><span class="si">%</span><span class="s">d'</span><span class="o">%</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dic</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">dic</span>
+</code></pre></div></div>
+
+<h4 id="3-using-pretrained-word2vec-to-replace-the-dictionary">3. using pretrained word2vec to replace the dictionary</h4>
+<ul>
+  <li>input:<code class="highlighter-rouge">DICTIONARY</code></li>
+  <li>output: <code class="highlighter-rouge">pha</code> ,a pretained word2vec matrix of <code class="highlighter-rouge">DICTIONARY</code> saved in <code class="highlighter-rouge">WORD2VEC_SUB</code></li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">fileinput</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">def</span> <span class="nf">view_bar</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">total</span><span class="p">):</span>
+    <span class="s">"""优化进度条显示"""</span>
+    <span class="n">rate</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">total</span>
+    <span class="n">rate_num</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="s">'</span><span class="se">\r</span><span class="s">'</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="s">'[</span><span class="si">%</span><span class="s">s</span><span class="si">%</span><span class="s">s]</span><span class="si">%</span><span class="s">d</span><span class="si">%%</span><span class="s">'</span> <span class="o">%</span> <span class="p">(</span><span class="s">"="</span> <span class="o">*</span> <span class="n">rate_num</span><span class="p">,</span> <span class="s">" "</span> <span class="o">*</span> <span class="p">(</span><span class="mi">100</span> <span class="o">-</span> <span class="n">rate_num</span><span class="p">),</span> <span class="n">rate_num</span><span class="p">,)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">get_word2vec</span><span class="p">(</span><span class="n">WORD2VEC_DIC</span><span class="p">,</span> <span class="c1"># 已预训练好的词向量文件地址
+</span>                 <span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="c1"># 替换好的字典
+</span>                 <span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">):</span><span class="c1"># get_news_dic的变量
+</span>    <span class="s">"""
+    采用预训练好的部分词向量。仅使用部分，是为了节省内存。
+    
+    1. 遍历已训练好的词向量文件
+    2. 替换掉本例词典中存在词的词向量
+    
+    在神经网络训练时，再用这个WORD2VEC_SUB将文本转化为词向量
+    """</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"正在加载预训练词向量……"</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">WORD2VEC_SUB</span><span class="p">):</span> <span class="c1">#如果之前已经生成过替换后的词向量
+</span>        <span class="k">print</span><span class="p">(</span><span class="s">"已存在替换好的词向量，直接读取"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pha</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>  
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">):</span><span class="c1">#如果之前已经生成过所有新闻的字典
+</span>            <span class="k">print</span><span class="p">(</span><span class="s">"已存在由所有新闻生成的字典，直接读取"</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">DICTIONARY</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>   
+        <span class="k">else</span><span class="p">:</span>
+             <span class="c1"># 生成利用所有新闻归纳出的字典
+</span>            <span class="n">DICTIONARY</span> <span class="o">=</span> <span class="n">get_news_dic</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">)</span>
+        
+        <span class="c1"># 1. 生成[词向量个数, 300维]的随机均匀分布
+</span>        <span class="n">pha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">DICTIONARY</span><span class="p">),</span> <span class="mi">300</span><span class="p">])</span> 
+        <span class="c1"># 2. 使用预训练好的词向量替换掉随机生成的分布
+</span>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">WORD2VEC_DIC</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">fileinput</span><span class="o">.</span><span class="nb">input</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="p">(</span><span class="n">WORD2VEC_DIC</span><span class="p">),</span> <span class="n">openhook</span><span class="o">=</span><span class="n">fileinput</span><span class="o">.</span><span class="n">hook_encoded</span><span class="p">(</span><span class="s">'UTF-8'</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">word_and_vec</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">' '</span><span class="p">)</span>
+                    <span class="n">word</span> <span class="o">=</span> <span class="n">word_and_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">vec</span> <span class="o">=</span> <span class="n">word_and_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">301</span><span class="p">]</span>
+                    
+                    <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">DICTIONARY</span><span class="p">:</span><span class="c1">#替换
+</span>                        <span class="n">pha</span><span class="p">[</span><span class="n">DICTIONARY</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">word</span><span class="p">)]</span> <span class="o">=</span> <span class="n">vec</span>
+                        <span class="c1">#进度条
+</span>                        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">if</span> <span class="n">count</span> <span class="o">%</span> <span class="mi">36000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="c1"># print('处理进度：', count / total_line_num * 100, '%')
+</span>                            <span class="n">view_bar</span><span class="p">(</span><span class="s">'处理进度：'</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span><span class="mi">364991</span><span class="p">)</span> <span class="c1">#别人训练好的词向量有36万词 
+</span>            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="s">'wb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">pha</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="c1"># 把所有新闻的词向量保存入文件   
+</span>    <span class="k">print</span><span class="p">(</span><span class="s">"预训练词向量加载完毕。"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pha</span>
+</code></pre></div></div>
+<h4 id="4-transform-news-of-each-class-into-3d-matrix">4. transform news of each class into 3D matrix</h4>
+<ul>
+  <li>a word is a vector; one sample of news is a matrix; all the samples of news is a 3D matrix whose height is equal to maximum number of words in one sample news</li>
+  <li>input: <code class="highlighter-rouge">pha</code>,<code class="highlighter-rouge">DICTIONARY</code></li>
+  <li>output:<code class="highlighter-rouge">x_train_3d_vecs</code> saved in <code class="highlighter-rouge">ASPECT_WORD2VEC</code> folder</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="k">def</span> <span class="nf">get_asp_w2v</span><span class="p">(</span><span class="n">ASPECT_WORD2VEC</span><span class="p">,</span><span class="n">data_train</span><span class="p">,</span><span class="n">WORD2VEC_DIC</span><span class="p">,</span><span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">,</span><span class="n">set_sequence_length</span><span class="p">):</span>
+    <span class="s">"""
+    将每个类别的新闻文本，进行文本预处理后，用替换好的所有新闻词典，生成词向量3d矩阵
+    """</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">ASPECT_WORD2VEC</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"已存在该类别词向量3d矩阵，直接读取"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">ASPECT_WORD2VEC</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">x_train_3d_vecs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">max_len</span> <span class="o">=</span> <span class="n">x_train_3d_vecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1">#文本预处理
+</span>        <span class="n">x_train</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">convert_doc_to_wordlist</span><span class="p">(</span><span class="n">data_train</span><span class="p">[</span><span class="s">"title"</span><span class="p">],</span><span class="n">tool</span> <span class="o">=</span> <span class="s">"jieba"</span><span class="p">,</span><span class="n">cut_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">mode</span> <span class="o">=</span><span class="s">"accuracy"</span><span class="p">)</span>
+        <span class="c1">#计算最大句子长度
+</span>        <span class="k">if</span> <span class="n">set_sequence_length</span><span class="o">!=</span><span class="bp">None</span><span class="p">:</span><span class="c1">#直接指定最大句子长度
+</span>            <span class="n">max_len</span> <span class="o">=</span> <span class="n">set_sequence_length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span><span class="n">x_train</span><span class="p">)))</span>
+        <span class="c1">#补零
+</span>        <span class="k">def</span> <span class="nf">padding_sent</span><span class="p">(</span><span class="n">sent</span><span class="p">,</span><span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span> <span class="p">,</span><span class="n">padding_token</span><span class="o">=</span><span class="s">"空"</span><span class="p">):</span>
+            <span class="s">"""给不满足句子长度的句子补零"""</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sent</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_len</span><span class="p">:</span>
+                <span class="n">sent</span> <span class="o">=</span> <span class="n">sent</span><span class="p">[:</span><span class="n">max_len</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sent</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">padding_token</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_len</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">sent</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="n">sent</span>
+        <span class="n">x_train_pad</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">padding_sent</span><span class="p">,</span><span class="n">x_train</span><span class="p">))</span>
+        <span class="c1">#读取词向量
+</span>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">WORD2VEC_SUB</span><span class="p">):</span> <span class="c1">#如果之前已经生成过替换后的词向量
+</span>            <span class="k">print</span><span class="p">(</span><span class="s">"已存在替换好的词向量，直接读取"</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pha</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pha</span> <span class="o">=</span> <span class="n">get_word2vec</span><span class="p">(</span><span class="n">WORD2VEC_DIC</span><span class="p">,</span><span class="n">WORD2VEC_SUB</span><span class="p">,</span> <span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">)</span>
+        <span class="c1">#读取词典
+</span>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"已存在由所有新闻生成的字典，直接读取"</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">DICTIONARY</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">DICTIONARY</span> <span class="o">=</span> <span class="n">get_news_dic</span><span class="p">(</span><span class="n">TRAIN_DATA</span><span class="p">,</span><span class="n">DICTIONARY_DIC</span><span class="p">,</span><span class="n">WORD_FREQUENCY_LOW</span><span class="p">)</span> 
+        <span class="c1">#生成该类别新闻词向量3d矩阵
+</span>        <span class="n">x_train_3d_vecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">convert_sent_to_mat</span><span class="p">(</span><span class="n">sent</span><span class="p">,</span><span class="n">pha</span><span class="p">,</span><span class="n">DICTIONARY</span><span class="p">)</span> <span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">x_train_pad</span><span class="p">])</span>
+        <span class="n">x_train_3d_vecs</span><span class="o">.</span><span class="n">shape</span>
+        <span class="c1">#保存该类别的词向量3d矩阵
+</span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">ASPECT_WORD2VEC</span><span class="p">,</span> <span class="s">'wb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">x_train_3d_vecs</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="c1"># 保存入文件       
+</span>    <span class="k">return</span> <span class="n">x_train_3d_vecs</span><span class="p">,</span><span class="n">max_len</span>
+</code></pre></div></div>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

@@ -1,0 +1,334 @@
+I"��<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（六）<br />深度学习文本分类模型之用CNN RNN做文本分类</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-6text-classification-with-deep-learning-cnn-rnn">Main step 6:<center>text classification with deep learning (CNN RNN)</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>classification model ：CNN、RNN</li>
+  <li>best model ：CNN+word2vec, accuracy:84%</li>
+  <li>reference:
+    <ul>
+      <li><a href="https://arxiv.org/abs/1408.5882">Kim Y. Convolutional Neural Networks for Sentence Classification[J]. Eprint Arxiv, 2014.</a></li>
+      <li><a href="https://github.com/dennybritz/cnn-text-classification-tf">Convolutional Neural Network for Text Classification in Tensorflow</a></li>
+      <li><a href="http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/">Implementing a CNN for Text Classification in TensorFlow</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-generates-a-batch-iterator-for-a-dataset">1. Generates a batch iterator for a dataset.</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">batch_iter</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="s">"""
+    Generates a batch iterator for a dataset.
+    """</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">num_batches_per_epoch</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">batch_size</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epochs</span><span class="p">):</span>
+        <span class="c1"># Shuffle the data at each epoch
+</span>        <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+            <span class="n">shuffle_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data_size</span><span class="p">))</span>
+            <span class="n">shuffled_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">shuffle_indices</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shuffled_data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">for</span> <span class="n">batch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_batches_per_epoch</span><span class="p">):</span>
+            <span class="n">start_index</span> <span class="o">=</span> <span class="n">batch_num</span> <span class="o">*</span> <span class="n">batch_size</span>
+            <span class="n">end_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">batch_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">data_size</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">shuffled_data</span><span class="p">[</span><span class="n">start_index</span><span class="p">:</span><span class="n">end_index</span><span class="p">]</span>
+
+</code></pre></div></div>
+
+<h4 id="2-cnn-text-classification-model">2. CNN text classification model</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="k">class</span> <span class="nc">TextCNN</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="s">'''
+    A CNN for text classification
+    Uses and embedding layer, followed by a convolutional, max-pooling and softmax layer.
+    '''</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">sequence_length</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span>
+        <span class="n">embedding_size</span><span class="p">,</span> <span class="n">filter_sizes</span><span class="p">,</span> <span class="n">num_filters</span><span class="p">,</span> <span class="n">l2_reg_lambda</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+
+        <span class="c1"># Placeholders for input, output and dropout
+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">input_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span><span class="n">sequence_length</span><span class="p">,</span><span class="n">embedding_size</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s">"input_x"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s">"input_y"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout_keep_prob</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">"dropout_keep_prob"</span><span class="p">)</span>
+
+        <span class="c1"># Keeping track of l2 regularization loss (optional)
+</span>        <span class="n">l2_loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+
+	    <span class="c1"># Embedding layer
+#        phalanx = tf.Variable(initial_value=word2vec_random, dtype=tf.float32)
+#        embedded_chars = tf.nn.embedding_lookup(phalanx, self.input_x)
+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">embedded_chars_expended</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_x</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+	    <span class="c1"># Create a convolution + maxpool layer for each filter size
+</span>        <span class="n">pooled_outputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">filter_size</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">filter_sizes</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">"conv-maxpool-</span><span class="si">%</span><span class="s">s"</span> <span class="o">%</span> <span class="n">filter_size</span><span class="p">):</span>
+                <span class="c1"># Convolution Layer
+</span>                <span class="n">filter_shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">filter_size</span><span class="p">,</span> <span class="n">embedding_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_filters</span><span class="p">]</span>
+                <span class="n">W</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">truncated_normal</span><span class="p">(</span><span class="n">filter_shape</span><span class="p">,</span> <span class="n">stddev</span><span class="o">=</span><span class="mf">0.1</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s">"W"</span><span class="p">)</span>
+                <span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">num_filters</span><span class="p">]),</span> <span class="n">name</span><span class="o">=</span><span class="s">"b"</span><span class="p">)</span>
+                <span class="c1"># conv2d操作接收一个4维的张量，维度分别代表batch, width, height 和 channel
+</span>                <span class="n">conv</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">embedded_chars_expended</span><span class="p">,</span>
+                    <span class="n">W</span><span class="p">,</span>
+                    <span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                    <span class="n">padding</span><span class="o">=</span><span class="s">"VALID"</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s">"conv"</span><span class="p">)</span>
+                <span class="c1"># Apply nonlinearity
+</span>                <span class="n">h</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">bias_add</span><span class="p">(</span><span class="n">conv</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s">"relu"</span><span class="p">)</span>
+                <span class="c1"># Maxpooling over the outputs
+</span>                <span class="n">pooled</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">max_pool</span><span class="p">(</span>
+                    <span class="n">h</span><span class="p">,</span>
+                    <span class="n">ksize</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">sequence_length</span> <span class="o">-</span> <span class="n">filter_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                    <span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                    <span class="n">padding</span><span class="o">=</span><span class="s">'VALID'</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s">"pool"</span><span class="p">)</span>
+                <span class="n">pooled_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pooled</span><span class="p">)</span>
+
+        <span class="c1"># Combine all the pooled features
+</span>        <span class="n">num_filters_total</span> <span class="o">=</span> <span class="n">num_filters</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">filter_sizes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h_pool</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">pooled_outputs</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h_pool_flat</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h_pool</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_filters_total</span><span class="p">])</span>
+
+        <span class="c1"># Add dropout
+</span>        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">"dropout"</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">h_drop</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h_pool_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout_keep_prob</span><span class="p">)</span>
+
+        <span class="c1"># Final (unnormalized) scores and predictions
+</span>        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">"output"</span><span class="p">):</span>
+            <span class="n">W</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span>
+                <span class="s">"W"</span><span class="p">,</span>
+                <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">num_filters_total</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">],</span>
+                <span class="n">initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">xavier_initializer</span><span class="p">())</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">num_classes</span><span class="p">]),</span> <span class="n">name</span><span class="o">=</span><span class="s">"b"</span><span class="p">)</span>
+            <span class="n">l2_loss</span> <span class="o">+=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">l2_loss</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+            <span class="n">l2_loss</span> <span class="o">+=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">l2_loss</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scores</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">xw_plus_b</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h_drop</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">"scores"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">"predictions"</span><span class="p">)</span>
+
+        <span class="c1"># Calculate mean cross-entropy loss
+</span>        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">"loss"</span><span class="p">):</span>
+            <span class="n">losses</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax_cross_entropy_with_logits</span><span class="p">(</span><span class="n">logits</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_y</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span> <span class="o">+</span> <span class="n">l2_reg_lambda</span> <span class="o">*</span> <span class="n">l2_loss</span>
+
+        <span class="c1"># Accuracy
+</span>        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">"accuracy"</span><span class="p">):</span>
+            <span class="n">correct_predictions</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predictions</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_y</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">correct_predictions</span><span class="p">,</span> <span class="s">"float"</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s">"accuracy"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="3-train-the-cnn-by-using-word2vec-3d-matrix">3. train the CNN by using word2vec 3D matrix</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">tensorflow.contrib</span> <span class="kn">import</span> <span class="n">learn</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"E:/graduate/Paper/code/"</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">w2v_CNN_data_helpers</span> <span class="k">as</span> <span class="n">CNN_data_helpers</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"E:/graduate/Paper/code/"</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">w2v_CNN</span> <span class="kn">import</span> <span class="n">TextCNN</span> 
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"E:/graduate/Paper"</span><span class="p">)</span>
+<span class="c1"># ==================================================
+# Data loading params
+</span><span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_float</span><span class="p">(</span><span class="s">"dev_sample_percentage"</span><span class="p">,</span> <span class="mf">0.10</span><span class="p">,</span> <span class="s">"Percentage of the training data to use for validation"</span><span class="p">)</span>
+<span class="c1"># 每次只能跑一个类别的新闻数据
+</span><span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">"aspect"</span><span class="p">,</span> <span class="s">"投资"</span><span class="p">,</span> <span class="s">"Data source for the positive data."</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">"file_name"</span><span class="p">,</span> <span class="s">"train.csv"</span><span class="p">,</span> <span class="s">"Data source for the negative data."</span><span class="p">)</span>
+
+<span class="c1"># Model Hyperparameters
+#tf.flags.DEFINE_integer("min_count", 5, "word2vec min_count(default: 5)")
+#embedding_dim不能改了，必须与训练好的word2vec模型一致
+</span><span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"embedding_dim"</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="s">"Dimensionality of character embedding (default: 128)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">"filter_sizes"</span><span class="p">,</span> <span class="s">"3,4,5"</span><span class="p">,</span> <span class="s">"Comma-separated filter sizes (default: '3,4,5')"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"num_filters"</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="s">"Number of filters per filter size (default: 128)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_float</span><span class="p">(</span><span class="s">"dropout_keep_prob"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s">"Dropout keep probability (default: 0.5)(better 0.3)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_float</span><span class="p">(</span><span class="s">"l2_reg_lambda"</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="s">"L2 regularization lambda (default: 0.0)"</span><span class="p">)</span>
+
+<span class="c1"># Training parameters
+</span><span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"batch_size"</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span> <span class="s">"Batch Size (default: 64)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"num_epochs"</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span> <span class="s">"Number of training epochs (default: 200)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"evaluate_every"</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="s">"Evaluate model on dev set after this many steps (default: 100)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"checkpoint_every"</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="s">"Save model after this many steps (default: 100)"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">"num_checkpoints"</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s">"Number of checkpoints to store (default: 5)"</span><span class="p">)</span>
+<span class="c1"># Misc Parameters
+</span><span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_boolean</span><span class="p">(</span><span class="s">"allow_soft_placement"</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s">"Allow device soft device placement"</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_boolean</span><span class="p">(</span><span class="s">"log_device_placement"</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">"Log placement of ops on devices"</span><span class="p">)</span>
+
+<span class="n">FLAGS</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">FLAGS</span>
+
+<span class="k">def</span> <span class="nf">preprocess</span><span class="p">():</span>
+    <span class="c1"># Data Preparation
+</span>    <span class="c1"># ==================================================
+</span>
+    <span class="c1"># Load data
+</span>    <span class="k">print</span><span class="p">(</span><span class="s">"Loading data..."</span><span class="p">)</span>
+    <span class="n">x_text</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span><span class="n">sequence_length</span> <span class="o">=</span> <span class="n">CNN_data_helpers</span><span class="o">.</span><span class="n">load_data_and_labels</span><span class="p">(</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">aspect</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">file_name</span><span class="p">)</span>
+
+    
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_text</span><span class="p">)</span>
+
+    <span class="c1"># Randomly shuffle data
+</span>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">shuffle_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span>
+    <span class="n">x_shuffled</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">shuffle_indices</span><span class="p">]</span>
+    <span class="n">y_shuffled</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">shuffle_indices</span><span class="p">]</span>
+
+    <span class="c1"># Split train/test set
+</span>    <span class="c1"># TODO: This is very crude, should use cross-validation
+</span>    <span class="n">dev_sample_index</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">dev_sample_percentage</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span>
+    <span class="n">x_train</span><span class="p">,</span> <span class="n">x_dev</span> <span class="o">=</span> <span class="n">x_shuffled</span><span class="p">[:</span><span class="n">dev_sample_index</span><span class="p">],</span> <span class="n">x_shuffled</span><span class="p">[</span><span class="n">dev_sample_index</span><span class="p">:]</span>
+    <span class="n">y_train</span><span class="p">,</span> <span class="n">y_dev</span> <span class="o">=</span> <span class="n">y_shuffled</span><span class="p">[:</span><span class="n">dev_sample_index</span><span class="p">],</span> <span class="n">y_shuffled</span><span class="p">[</span><span class="n">dev_sample_index</span><span class="p">:]</span>
+
+    <span class="k">del</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x_shuffled</span><span class="p">,</span> <span class="n">y_shuffled</span>
+
+<span class="c1">#    print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
+</span>    <span class="k">print</span><span class="p">(</span><span class="s">"Train/Dev split: {:d}/{:d}"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y_train</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_dev</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">x_dev</span><span class="p">,</span> <span class="n">y_dev</span>
+
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">x_dev</span><span class="p">,</span> <span class="n">y_dev</span><span class="p">):</span>
+    <span class="c1"># Training
+</span>    <span class="c1"># ==================================================
+</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+        <span class="n">session_conf</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">ConfigProto</span><span class="p">(</span>
+          <span class="n">allow_soft_placement</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">allow_soft_placement</span><span class="p">,</span>
+          <span class="n">log_device_placement</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">log_device_placement</span><span class="p">)</span>
+        <span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">session_conf</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+            <span class="n">cnn</span> <span class="o">=</span> <span class="n">TextCNN</span><span class="p">(</span>
+                <span class="n">sequence_length</span><span class="o">=</span><span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">num_classes</span><span class="o">=</span><span class="n">y_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">embedding_size</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">embedding_dim</span><span class="p">,</span>
+                <span class="n">filter_sizes</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">filter_sizes</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">","</span><span class="p">))),</span>
+                <span class="n">num_filters</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">num_filters</span><span class="p">,</span>
+                <span class="n">l2_reg_lambda</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">l2_reg_lambda</span><span class="p">)</span>
+
+            <span class="c1"># Define Training procedure
+</span>            <span class="n">global_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">"global_step"</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">)</span>
+            <span class="n">grads_and_vars</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">compute_gradients</span><span class="p">(</span><span class="n">cnn</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+            <span class="n">train_op</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">apply_gradients</span><span class="p">(</span><span class="n">grads_and_vars</span><span class="p">,</span> <span class="n">global_step</span><span class="o">=</span><span class="n">global_step</span><span class="p">)</span>
+
+            <span class="c1"># Keep track of gradient values and sparsity (optional)
+</span>            <span class="n">grad_summaries</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">grads_and_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">g</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">grad_hist_summary</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">"{}/grad/hist"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">g</span><span class="p">)</span>
+                    <span class="n">sparsity_summary</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="s">"{}/grad/sparsity"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">zero_fraction</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+                    <span class="n">grad_summaries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grad_hist_summary</span><span class="p">)</span>
+                    <span class="n">grad_summaries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sparsity_summary</span><span class="p">)</span>
+            <span class="n">grad_summaries_merged</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">grad_summaries</span><span class="p">)</span>
+
+            <span class="c1"># Output directory for models and summaries
+</span>            <span class="n">timestamp</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()))</span>
+            <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">curdir</span><span class="p">,</span> <span class="s">"code"</span><span class="p">,</span><span class="s">"runs"</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"Writing to {}</span><span class="se">\n</span><span class="s">"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">out_dir</span><span class="p">))</span>
+
+            <span class="c1"># Summaries for loss and accuracy
+</span>            <span class="n">loss_summary</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="s">"loss"</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+            <span class="n">acc_summary</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="s">"accuracy"</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">accuracy</span><span class="p">)</span>
+
+            <span class="c1"># Train Summaries
+</span>            <span class="n">train_summary_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">merge</span><span class="p">([</span><span class="n">loss_summary</span><span class="p">,</span> <span class="n">acc_summary</span><span class="p">,</span> <span class="n">grad_summaries_merged</span><span class="p">])</span>
+            <span class="n">train_summary_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="s">"summaries"</span><span class="p">,</span> <span class="s">"train"</span><span class="p">)</span>
+            <span class="n">train_summary_writer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">FileWriter</span><span class="p">(</span><span class="n">train_summary_dir</span><span class="p">,</span> <span class="n">sess</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+
+            <span class="c1"># Dev summaries
+</span>            <span class="n">dev_summary_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">merge</span><span class="p">([</span><span class="n">loss_summary</span><span class="p">,</span> <span class="n">acc_summary</span><span class="p">])</span>
+            <span class="n">dev_summary_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="s">"summaries"</span><span class="p">,</span> <span class="s">"dev"</span><span class="p">)</span>
+            <span class="n">dev_summary_writer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">FileWriter</span><span class="p">(</span><span class="n">dev_summary_dir</span><span class="p">,</span> <span class="n">sess</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+
+            <span class="c1"># Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
+</span>            <span class="n">checkpoint_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="s">"checkpoints"</span><span class="p">))</span>
+            <span class="n">checkpoint_prefix</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">,</span> <span class="s">"model"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">)</span>
+            <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables</span><span class="p">(),</span> <span class="n">max_to_keep</span><span class="o">=</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">num_checkpoints</span><span class="p">)</span>
+
+
+            <span class="c1"># Initialize all variables
+</span>            <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+
+            <span class="k">def</span> <span class="nf">train_step</span><span class="p">(</span><span class="n">x_batch</span><span class="p">,</span> <span class="n">y_batch</span><span class="p">):</span>
+                <span class="s">"""
+                A single training step
+                """</span>
+                <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">input_x</span><span class="p">:</span> <span class="n">x_batch</span><span class="p">,</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">input_y</span><span class="p">:</span> <span class="n">y_batch</span><span class="p">,</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">dropout_keep_prob</span><span class="p">:</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">dropout_keep_prob</span>
+                <span class="p">}</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">summaries</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">train_op</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">train_summary_op</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">accuracy</span><span class="p">],</span>
+                    <span class="n">feed_dict</span><span class="p">)</span>
+                <span class="n">time_str</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">"{}: step {}, loss {:g}, acc {:g}"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">time_str</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">))</span>
+                <span class="n">train_summary_writer</span><span class="o">.</span><span class="n">add_summary</span><span class="p">(</span><span class="n">summaries</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">dev_step</span><span class="p">(</span><span class="n">x_batch</span><span class="p">,</span> <span class="n">y_batch</span><span class="p">,</span> <span class="n">writer</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+                <span class="s">"""
+                Evaluates model on a dev set
+                """</span>
+                <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">input_x</span><span class="p">:</span> <span class="n">x_batch</span><span class="p">,</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">input_y</span><span class="p">:</span> <span class="n">y_batch</span><span class="p">,</span>
+                  <span class="n">cnn</span><span class="o">.</span><span class="n">dropout_keep_prob</span><span class="p">:</span> <span class="mf">1.0</span>
+                <span class="p">}</span>
+                <span class="n">step</span><span class="p">,</span> <span class="n">summaries</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">global_step</span><span class="p">,</span> <span class="n">dev_summary_op</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">cnn</span><span class="o">.</span><span class="n">accuracy</span><span class="p">],</span>
+                    <span class="n">feed_dict</span><span class="p">)</span>
+                <span class="n">time_str</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">"{}: step {}, loss {:g}, acc {:g}"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">time_str</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">writer</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">add_summary</span><span class="p">(</span><span class="n">summaries</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+            <span class="c1"># Generate batches
+</span>            <span class="n">batches</span> <span class="o">=</span> <span class="n">CNN_data_helpers</span><span class="o">.</span><span class="n">batch_iter</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)),</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">num_epochs</span><span class="p">)</span>
+            <span class="c1"># Training loop. For each batch...
+</span>            <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
+                <span class="n">x_batch</span><span class="p">,</span> <span class="n">y_batch</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">batch</span><span class="p">)</span>
+                <span class="n">train_step</span><span class="p">(</span><span class="n">x_batch</span><span class="p">,</span> <span class="n">y_batch</span><span class="p">)</span>
+                <span class="n">current_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">global_step</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">global_step</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">current_step</span> <span class="o">%</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">evaluate_every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">Evaluation:"</span><span class="p">)</span>
+                    <span class="n">dev_step</span><span class="p">(</span><span class="n">x_dev</span><span class="p">,</span> <span class="n">y_dev</span><span class="p">,</span> <span class="n">writer</span><span class="o">=</span><span class="n">dev_summary_writer</span><span class="p">)</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">""</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">current_step</span> <span class="o">%</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">checkpoint_every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">path</span> <span class="o">=</span> <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">checkpoint_prefix</span><span class="p">,</span> <span class="n">global_step</span><span class="o">=</span><span class="n">current_step</span><span class="p">)</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">"Saved model checkpoint to {}</span><span class="se">\n</span><span class="s">"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">x_dev</span><span class="p">,</span><span class="n">y_dev</span> <span class="o">=</span> <span class="n">preprocess</span><span class="p">()</span>
+    <span class="n">train</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">x_dev</span><span class="p">,</span> <span class="n">y_dev</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</code></pre></div></div>
+
+<h4 id="4-visualize-the-training-process-using-tensorboard">4. visualize the training process using tensorboard</h4>
+<ul>
+  <li>tensorboard 注意路径不能有中文！！！</li>
+  <li>用anaconda prompt打开 并切换到summary的文件下
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd E:\graduate\Paper\code\runs\1546591413\summaries
+tensorboard --logdir=run1:“train”,run2:"dev"
+</code></pre></div>    </div>
+  </li>
+  <li>用浏览器打开 http://desktop-r5o5nhn:6006/</li>
+  <li>每一次改动都要重启prompt</li>
+</ul>
+
+<p>For more information about this project, please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

@@ -1,0 +1,18 @@
+I"|<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（三）<br />文本预处理</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-3text-prepossessing">Main step 3:<center>text prepossessing</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>delete duplicated,foreign news and ads</li>
+  <li>conbine the news of each class into <code class="highlighter-rouge">all_df.csv</code></li>
+  <li>obtain summary.xlsx according to <code class="highlighter-rouge">all_df.csv</code></li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-conbine-the-news-and-delete-the-duplicated">1. conbine the news and delete the duplicated</h4>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

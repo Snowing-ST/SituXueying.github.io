@@ -1,0 +1,18 @@
+I"�<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（五）<br />深度学习文本分类模型之用word2vec做文本表示</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-5text-classification-with-deep-learning-algorithm-text-representation-using-word2vec-pretrained-by-chinese-word-vectorshttpsgithubcomembeddingchinese-word-vectors">Main step 5:<center>text classification with deep learning algorithm: text representation using word2vec pretrained by [Chinese Word Vectors](https://github.com/Embedding/Chinese-Word-Vectors)</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>text representation:</li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<ol>
+  <li></li>
+</ol>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

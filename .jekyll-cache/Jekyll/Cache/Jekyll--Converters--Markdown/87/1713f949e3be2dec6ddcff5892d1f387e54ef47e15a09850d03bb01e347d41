@@ -1,0 +1,172 @@
+I"6F<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（二）<br />过滤无用新闻</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h3 id="main-step-2delete-useless-news-and-then-combine-them">Main step 2:<center>delete useless news and then combine them</center></h3>
+<h4 id="description-1">description 1:</h4>
+<ul>
+  <li>delete duplicated,foreign news and ads</li>
+  <li>conbine the news of each class into <code class="highlighter-rouge">all_df.csv</code></li>
+  <li>obtain summary.xlsx according to <code class="highlighter-rouge">all_df.csv</code></li>
+</ul>
+
+<h4 id="code-explanation">code explanation:</h4>
+<ol>
+  <li>conbine the news and delete the duplicated</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">batch_read_csv</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">):</span>
+    <span class="n">file_names</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">)</span>
+    <span class="n">file_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_names</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r"title.csv"</span><span class="p">,</span><span class="n">f</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#只读取后缀名为csv的文件
+</span>    <span class="n">all_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">file_names</span><span class="p">)):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">,</span><span class="n">file_names</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">,</span><span class="n">file_names</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span><span class="n">engine</span> <span class="o">=</span>  <span class="s">"python"</span><span class="p">)</span>
+
+        <span class="n">all_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">all_df</span><span class="p">,</span><span class="n">temp_df</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="c1">#        print(all_df.head())
+</span>    <span class="n">l1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_df</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"处理前新闻有</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="p">(</span><span class="n">l1</span><span class="p">))</span>
+    <span class="c1">#去重
+</span>    <span class="n">var_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">all_df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">var_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">"keyword"</span><span class="p">)</span>
+    <span class="n">all_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span> <span class="o">=</span> <span class="n">var_list</span><span class="p">,</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="c1">#只有完全一样的才删除
+</span>    <span class="n">l2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_df</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"删除重复新闻</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="p">(</span><span class="n">l1</span><span class="o">-</span><span class="n">l2</span><span class="p">))</span>
+<span class="c1">#    all_df.to_csv("F:/毕业论文/raw_data/经济/economics.csv",encoding="gb18030",index=False)
+</span>    <span class="c1">#all_df删除重复行后，index有空缺，重新索引
+</span>    <span class="n">all_df</span> <span class="o">=</span> <span class="n">all_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">all_df</span>
+</code></pre></div></div>
+<ol>
+  <li>delete foreign news according to <code class="highlighter-rouge">countryname.txt</code></li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 根据countryname.txt查找含有外国国家名的新闻
+</span><span class="k">def</span> <span class="nf">is_foreign_name</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">countryname</span> <span class="o">=</span>  <span class="nb">open</span><span class="p">(</span><span class="s">"./code/countryname.txt"</span><span class="p">,</span> <span class="s">'rb'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">'</span><span class="se">\r\n</span><span class="s">'</span><span class="p">)</span>
+    <span class="n">isforeign</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">token</span><span class="p">,</span><span class="n">text</span><span class="p">))</span><span class="o">&gt;=</span><span class="mi">1</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">countryname</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span>
+    <span class="n">notchina</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">token</span><span class="p">,</span><span class="n">text</span><span class="p">))</span><span class="o">&gt;=</span><span class="mi">1</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="p">[</span><span class="s">"北京"</span><span class="p">,</span><span class="s">"中国"</span><span class="p">,</span><span class="s">"内蒙古"</span><span class="p">]])</span><span class="o">==</span><span class="mi">0</span>
+    <span class="k">return</span>  <span class="n">isforeign</span> <span class="ow">and</span> <span class="n">notchina</span>
+</code></pre></div></div>
+<ol>
+  <li>delete ads according to <code class="highlighter-rouge">ad_web.txt</code></li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 根据ad_web.txt查找来自于广告网站的新闻
+</span><span class="k">def</span> <span class="nf">is_ad_web</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">ad_web</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">"./code/ad_web.txt"</span><span class="p">,</span><span class="s">'rb'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">"</span><span class="se">\r\n</span><span class="s">"</span><span class="p">)</span>
+    <span class="n">isadweb</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">text</span><span class="o">==</span><span class="n">token</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">ad_web</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">isadweb</span>
+
+<span class="c1"># 删除外国新闻和广告
+</span><span class="k">def</span> <span class="nf">rm_foreign_news</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">):</span>
+    <span class="n">all_df</span> <span class="o">=</span> <span class="n">batch_read_csv</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">)</span>
+    <span class="n">is_foreign</span> <span class="o">=</span> <span class="n">all_df</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span><span class="o">.</span><span class="nb">apply</span><span class="p">(</span><span class="n">is_foreign_name</span><span class="p">)</span>
+    <span class="n">is_foreign</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">is_foreign</span><span class="p">)</span>
+    <span class="n">dele_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_foreign</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="c1">#    all_df["title"][dele_num]
+</span>    <span class="n">all_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">dele_num</span><span class="p">,</span><span class="n">inplace</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="n">all_df</span> <span class="o">=</span> <span class="n">all_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"删除外国新闻</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">dele_num</span><span class="p">))</span>
+    <span class="n">ad_web</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_df</span><span class="p">[</span><span class="s">"source"</span><span class="p">]</span><span class="o">.</span><span class="nb">apply</span><span class="p">(</span><span class="n">is_ad_web</span><span class="p">))</span>
+    <span class="n">dele_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ad_web</span><span class="o">==</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">all_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">dele_num</span><span class="p">,</span><span class="n">inplace</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"删除广告新闻</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">dele_num</span><span class="p">))</span>
+    
+    <span class="n">all_df</span> <span class="o">=</span> <span class="n">all_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>    
+    <span class="k">return</span> <span class="n">all_df</span>
+</code></pre></div></div>
+
+<ol>
+  <li>
+    <p>delete news in unnecessary time
+```python
+def dele_wrongtime(full_class_name,bt_ymd,et_ymd):
+ “””
+ full_class_name,新闻类别名
+ bt_ymd,开始时间
+ et_ymd，结束时间
+ “””</p>
+
+    <p>all_df = rm_foreign_news(full_class_name)</p>
+
+    <p>#统计年份季度的新闻数:新增年份列与季度列
+ time = pd.to_datetime(all_df[“date”],format=”%Y年%m月%d日”)
+ dele_num1 = np.where(bt_ymd&gt;time)[0]
+ dele_num2 = np.where(time&gt;et_ymd)[0]
+ dele_num = np.append(dele_num1 , dele_num2)
+ print(“删除非需要时间段新闻%d条”%len(dele_num))
+ all_df.drop(dele_num,inplace = True)
+ all_df = all_df.reset_index(drop=True)
+ print(“处理后新闻有%d条”%(len(all_df)))
+ return all_df</p>
+  </li>
+</ol>
+
+<p>def get_all_df(path,bt_ymd,et_ymd):
+    class_names  = os.listdir(path)
+    for class_name in class_names:
+        print(“正在合并【%s】类新闻……“%class_name)
+        full_class_name = os.path.join(path,class_name)</p>
+<h1 id="all_df--batch_read_csvfull_class_name--原版">all_df = batch_read_csv(full_class_name)  #原版</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    all_df = dele_wrongtime(full_class_name,bt_ymd,et_ymd)
+    all_df.to_csv(os.path.join(full_class_name,class_name+"all_df.csv"),encoding="gb18030",index=False)    
+</code></pre></div></div>
+
+<h1 id="生成合并处理版">生成合并处理版</h1>
+<p>path = “./renew_data”
+bt_ymd = “2018-07-01”
+et_ymd = “2019-06-30”
+get_all_df(path,bt_ymd,et_ymd)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+5. obtain summary table
+```python
+def onestat(param):
+    full_class_name,excel_writer = param
+    class_name = os.path.split(full_class_name)[1]
+    all_df = pd.read_csv(os.path.join(full_class_name,class_name+"all_df.csv"),encoding="gb18030")
+    
+    source_websites = list(all_df["source"].value_counts().index)[:15]
+    keywords = list(all_df["keyword"].value_counts().index)
+    ram = np.random.randint(0, high=len(all_df)-1, size=4, dtype='l')
+    examples = all_df.ix[ram,"title"]
+    examples = "\n".join(examples)
+    
+    time = pd.to_datetime(all_df["date"],format="%Y年%m月%d日")
+    all_df["year"] = list(pd.DatetimeIndex(time).year)
+    all_df["quarter"] = list(pd.DatetimeIndex(time).quarter)
+    
+    date_stat = all_df["title"].groupby([all_df["year"],all_df["quarter"]]).count()
+    date_stat.to_excel(excel_writer,class_name)
+    return source_websites,keywords,len(all_df),examples
+
+def allstat(path,writer):
+    classes = os.listdir(path)
+    subpaths = [os.path.join(path,sp) for sp in os.listdir(path)]
+    param = [(sp,writer) for sp in subpaths]      
+    result = list(map(onestat,param))   
+    source_websites = [[tup[0] for tup in result]][0]
+    source_websites_str = ["，".join(name) for name in source_websites]
+    keywords = [[tup[1] for tup in result]][0]
+    keywords_str = ["，".join(k) for k in keywords]
+    num_class = [tup[2] for tup in result]
+    examples = [tup[3] for tup in result]
+    summary = pd.DataFrame(data = np.array([classes,keywords_str,source_websites_str,num_class,examples]).T,
+                                           columns = ["class","keywords","source","num_class","examples"])
+
+    
+    summary.to_excel(writer,'summary')
+    writer.save()
+    print("excel已生成，请打开【"+os.getcwd()+"】查看详情")
+
+path = "./renew_data"
+# 统计新闻信息
+writer = pd.ExcelWriter('summary.xlsx')
+allstat(path,writer)
+</code></pre></div></div>
+:ET

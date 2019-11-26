@@ -1,0 +1,106 @@
+I"�H<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（四）<br />文本分类基准模型：向量空间模型</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-4traditional-text-classification-with-vsm">Main step 4:<center>traditional text classification with VSM</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>text representation: TF-IDF</li>
+  <li>classification model ：logistic、Naïve Bayes、SVM</li>
+  <li>best model ：SVM, accuracy:77% (as basic line)</li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+
+<h4 id="1-word-representation">1. word representation</h4>
+<ul>
+  <li>two approaches to transform text into matrix:
+    <ol>
+      <li>tf-idf 2. one-hot</li>
+    </ol>
+  </li>
+  <li>input:two columns name <code class="highlighter-rouge">word_seg</code> and <code class="highlighter-rouge">label</code> of  <code class="highlighter-rouge">data_train</code> and <code class="highlighter-rouge">data_test</code></li>
+  <li>output: <code class="highlighter-rouge">data_train_tfidf</code>, <code class="highlighter-rouge">tags</code> ,<code class="highlighter-rouge">data_test_tfidf</code></li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">TfidfVectorizer</span><span class="p">,</span><span class="n">CountVectorizer</span>
+
+<span class="k">def</span> <span class="nf">vectorize</span><span class="p">(</span><span class="n">data_train</span><span class="p">,</span><span class="n">data_test</span><span class="p">,</span><span class="n">word_name</span> <span class="o">=</span> <span class="s">"word_seg"</span><span class="p">,</span><span class="n">tag_name</span><span class="o">=</span><span class="s">"label"</span><span class="p">,</span><span class="n">vectype</span> <span class="o">=</span> <span class="s">"tf-idf"</span><span class="p">,</span><span class="n">ngram_range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">max_features</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="s">"""
+    文本表示：tf-idf or one-hot
+    """</span>
+<span class="c1">#    data.isnull().any()#哪些列存在缺失值
+</span>    <span class="n">words</span> <span class="o">=</span> <span class="n">data_train</span><span class="p">[</span><span class="n">word_name</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="o">+</span><span class="n">data_test</span><span class="p">[</span><span class="n">word_name</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">vectype</span> <span class="o">==</span> <span class="s">"tf-idf"</span><span class="p">:</span>
+        <span class="n">transformer</span><span class="o">=</span><span class="n">TfidfVectorizer</span><span class="p">(</span><span class="n">ngram_range</span><span class="o">=</span><span class="n">ngram_range</span><span class="p">,</span><span class="n">max_features</span><span class="o">=</span><span class="n">max_features</span><span class="p">,</span><span class="n">min_df</span><span class="o">=</span><span class="n">min_df</span><span class="p">)</span>
+        <span class="n">data_tfidf</span><span class="o">=</span><span class="n">transformer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+        <span class="n">transformer2</span> <span class="o">=</span> <span class="n">TfidfVectorizer</span><span class="p">(</span><span class="n">vocabulary</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">)</span>
+        <span class="n">data_train_tfidf</span><span class="o">=</span><span class="n">transformer2</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data_train</span><span class="p">[</span><span class="n">word_name</span><span class="p">])</span>
+        <span class="n">data_test_tfidf</span><span class="o">=</span><span class="n">transformer2</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="n">word_name</span><span class="p">])</span>          
+        <span class="k">return</span> <span class="n">data_train_tfidf</span><span class="p">,</span><span class="n">data_train</span><span class="p">[</span><span class="n">tag_name</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">data_test_tfidf</span>
+    <span class="k">if</span> <span class="n">vectype</span> <span class="o">==</span> <span class="s">"one-hot"</span><span class="p">:</span>
+        <span class="n">transformer</span><span class="o">=</span><span class="n">CountVectorizer</span><span class="p">(</span><span class="n">ngram_range</span><span class="o">=</span><span class="n">ngram_range</span><span class="p">,</span><span class="n">max_features</span><span class="o">=</span><span class="n">max_features</span><span class="p">,</span><span class="n">min_df</span><span class="o">=</span><span class="n">min_df</span><span class="p">)</span>
+         
+        <span class="n">data_onehot</span><span class="o">=</span><span class="n">transformer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+        <span class="n">transformer2</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">vocabulary</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">)</span>
+        <span class="n">data_train_onehot</span><span class="o">=</span><span class="n">transformer2</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data_train</span><span class="p">[</span><span class="n">word_name</span><span class="p">])</span>
+        <span class="n">data_test_onehot</span><span class="o">=</span><span class="n">transformer2</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="n">word_name</span><span class="p">])</span>           
+        <span class="k">return</span> <span class="n">data_train_onehot</span><span class="p">,</span><span class="n">data_train</span><span class="p">[</span><span class="n">tag_name</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">data_test_onehot</span>
+
+<span class="n">data_train_tfidf</span><span class="p">,</span> <span class="n">tags</span> <span class="p">,</span><span class="n">data_test_tfidf</span> <span class="o">=</span> <span class="n">vectorize</span><span class="p">(</span><span class="n">data_train</span><span class="p">,</span><span class="n">data_test</span><span class="p">,</span><span class="n">word_name</span> <span class="o">=</span> <span class="s">"word_seg"</span><span class="p">,</span><span class="n">tag_name</span><span class="o">=</span><span class="s">"label"</span><span class="p">,</span><span class="n">vectype</span> <span class="o">=</span> <span class="s">"tf-idf"</span><span class="p">,</span><span class="n">ngram_range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">max_features</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">min_df</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="2-several-machine-learning-approaches">2. several machine learning approaches</h4>
+<ol>
+  <li>naive bayes 2. logistic regression 3. SVM</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.naive_bayes</span> <span class="kn">import</span> <span class="n">MultinomialNB</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>  
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">svm</span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">GridSearchCV</span><span class="p">,</span><span class="n">cross_val_score</span><span class="p">,</span> <span class="n">cross_val_predict</span><span class="p">,</span><span class="n">KFold</span>
+
+<span class="k">def</span> <span class="nf">train_NB</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">):</span>
+    <span class="n">grid_values</span> <span class="o">=</span> <span class="p">{</span><span class="s">'alpha'</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">1.1</span><span class="p">,</span><span class="mf">0.1</span><span class="p">)}</span> <span class="c1"># Decide which settings you want for the grid search. 
+</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">MultinomialNB</span><span class="p">(),</span> 
+                        <span class="n">grid_values</span><span class="p">,</span> <span class="n">scoring</span> <span class="o">=</span> <span class="s">"accuracy"</span><span class="p">,</span> <span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">grid_scores_</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"【NB】The best parameters are </span><span class="si">%</span><span class="s">s with a score of </span><span class="si">%0.4</span><span class="s">f"</span>
+          <span class="o">%</span> <span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">best_params_</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_score_</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_estimator_</span>
+
+<span class="k">def</span> <span class="nf">train_lg</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">):</span>
+    <span class="n">grid_values</span> <span class="o">=</span> <span class="p">{</span><span class="s">'tol'</span><span class="p">:[</span><span class="mf">0.001</span><span class="p">,</span><span class="mf">0.1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="s">'C'</span><span class="p">:</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">)}</span> <span class="c1"># Decide which settings you want for the grid search. 
+</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">LogisticRegression</span><span class="p">(</span><span class="n">penalty</span><span class="o">=</span><span class="s">"l2"</span><span class="p">,</span> <span class="n">dual</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> 
+                        <span class="n">grid_values</span><span class="p">,</span> <span class="n">scoring</span> <span class="o">=</span> <span class="s">"accuracy"</span><span class="p">,</span> <span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span><span class="p">,</span><span class="n">n_jobs</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">grid_scores_</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"【lg】The best parameters are </span><span class="si">%</span><span class="s">s with a score of </span><span class="si">%0.4</span><span class="s">f"</span>
+          <span class="o">%</span> <span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">best_params_</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_score_</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_estimator_</span>
+
+<span class="k">def</span> <span class="nf">train_SVM</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">):</span><span class="c1">#5,1,1 #4,0.9,1 0.8238
+</span>    <span class="s">"调参影响大。学习率越小，所需迭代次数越多"</span>
+    <span class="n">grid_values</span> <span class="o">=</span> <span class="p">{</span><span class="s">'C'</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span><span class="s">'gamma'</span><span class="p">:[</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.9</span><span class="p">]}</span> <span class="c1"># Decide which settings you want for the grid search. 
+</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">svm</span><span class="o">.</span><span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s">'rbf'</span><span class="p">,</span><span class="n">tol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">shrinking</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">probability</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                        <span class="n">grid_values</span><span class="p">,</span> <span class="n">scoring</span> <span class="o">=</span> <span class="s">"accuracy"</span><span class="p">,</span> <span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_tfidf</span><span class="p">,</span><span class="n">tags</span><span class="p">)</span> 
+    <span class="n">grid</span><span class="o">.</span><span class="n">grid_scores_</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"【SVM】The best parameters are </span><span class="si">%</span><span class="s">s with a score of </span><span class="si">%0.4</span><span class="s">f"</span>
+          <span class="o">%</span> <span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">best_params_</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_score_</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_estimator_</span>
+
+<span class="c1">#模型比较
+</span><span class="n">cv</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1994</span><span class="p">)</span>
+<span class="n">NB</span> <span class="o">=</span> <span class="n">train_NB</span><span class="p">(</span><span class="n">data_train_tfidf</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">)</span>
+<span class="n">lg</span> <span class="o">=</span> <span class="n">train_lg</span><span class="p">(</span><span class="n">data_train_tfidf</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">)</span>
+<span class="n">SVM</span> <span class="o">=</span> <span class="n">train_SVM</span><span class="p">(</span><span class="n">data_train_tfidf</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span><span class="n">cv</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

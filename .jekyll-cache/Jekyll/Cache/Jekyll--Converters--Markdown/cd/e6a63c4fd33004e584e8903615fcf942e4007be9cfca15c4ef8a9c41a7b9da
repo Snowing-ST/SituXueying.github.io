@@ -1,0 +1,196 @@
+I"��<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（三）<br />文本预处理</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-3text-prepossessing">Main step 3:<center>text prepossessing</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>split <code class="highlighter-rouge">all_df.csv</code> into training set and testing set by using stratified sampling according to year and keywords</li>
+  <li><b><font color="blue">artificially label the new in training set with “positive”, “neutral” and "negative"</font></b></li>
+  <li>text prepossessing including word segment and removing stop words</li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-split-all_dfcsv-into-training-set-and-testing-set">1. split <code class="highlighter-rouge">all_df.csv</code> into training set and testing set</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+    
+<span class="k">def</span> <span class="nf">sampling</span><span class="p">(</span><span class="n">subpath</span><span class="p">):</span>
+    <span class="n">file_names</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">subpath</span><span class="p">)</span>
+    <span class="n">file_name</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_names</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r"all_df.csv"</span><span class="p">,</span><span class="n">f</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#只读取后缀名为csv的文件
+</span>    <span class="n">all_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subpath</span><span class="p">,</span><span class="n">file_name</span><span class="p">),</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">engine</span><span class="o">=</span><span class="s">"python"</span><span class="p">)</span>
+    <span class="n">all_df</span><span class="p">[</span><span class="s">"sample"</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_df</span><span class="o">.</span><span class="nb">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="n">line</span><span class="p">[</span><span class="s">"keyword"</span><span class="p">]</span><span class="o">+</span><span class="s">"-"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="s">"year"</span><span class="p">]),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>   
+    <span class="n">x</span> <span class="o">=</span> <span class="n">all_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s">"sample"</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">all_df</span><span class="p">[</span><span class="s">"sample"</span><span class="p">]</span>
+    <span class="n">x_train</span><span class="p">,</span><span class="n">x_test</span><span class="p">,</span><span class="n">_</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">label</span><span class="p">,</span><span class="n">test_size</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span><span class="n">random_state</span><span class="o">=</span><span class="mi">1994</span><span class="p">)</span>
+    <span class="n">x_train</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subpath</span><span class="p">,</span><span class="s">"train1.csv"</span><span class="p">),</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span> <span class="c1">#需要人工打标签的
+</span>    <span class="n">x_test</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subpath</span><span class="p">,</span><span class="s">"test1.csv"</span><span class="p">),</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"E:/graduate/Paper/"</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="s">"E:/graduate/Paper/raw_data"</span>
+
+    <span class="c1">#只做一个类别
+</span>    <span class="c1">#sp = "物价"
+</span>    <span class="c1">#sampling(os.path.join(path,sp))
+</span>
+    <span class="c1">#并行方法，同时生成所有类别的训练集测试集
+</span>    <span class="n">subpaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">sp</span><span class="p">)</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)]</span>
+    <span class="n">p</span><span class="o">=</span><span class="n">Pool</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subpaths</span><span class="p">))</span>
+    <span class="n">p</span><span class="o">.</span><span class="nb">map</span><span class="p">(</span><span class="n">sampling</span><span class="p">,</span><span class="n">subpaths</span><span class="p">)</span>      
+    <span class="n">p</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>      
+</code></pre></div></div>
+
+<h4 id="2-delete-stop-words-according-to-stopwordtxt">2. delete stop words according to <code class="highlighter-rouge">stopWord.txt</code></h4>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">get_text</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span> 
+    <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span><span class="o">=</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">"utf-8"</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">text</span><span class="p">]</span> 
+    <span class="k">return</span> <span class="n">text</span>
+
+
+<span class="k">def</span> <span class="nf">get_stop_words</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">'./code/stopWord.txt'</span><span class="p">):</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">'rb'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'utf8'</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">','</span><span class="p">)</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>                                         <span class="c1">#查分停用词函数
+</span>
+
+<span class="k">def</span> <span class="nf">rm_tokens</span><span class="p">(</span><span class="n">words</span><span class="p">):</span>                                        <span class="c1"># 去掉一些停用词和完全包含数字的字符串
+</span>    <span class="n">words_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+    <span class="n">stop_words</span> <span class="o">=</span> <span class="n">get_stop_words</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">words_list</span><span class="o">.</span><span class="n">__len__</span><span class="p">())[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">words_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">stop_words</span><span class="p">:</span>                      <span class="c1"># 去除停用词
+</span>            <span class="n">words_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">words_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="n">words_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">words_list</span>
+</code></pre></div></div>
+<h4 id="2-delete-punctuation-and-special-characters">2. delete punctuation and special characters</h4>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">rm_char</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'</span><span class="se">\x01</span><span class="s">'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>                        <span class="c1">#全角的空白符  感觉问好 感叹号不应该删除
+</span>    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'</span><span class="se">\u3000</span><span class="s">'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">']'</span><span class="p">,</span><span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'</span><span class="err">\</span><span class="s">['</span><span class="p">,</span><span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'"'</span><span class="p">,</span><span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">r"[\)(↓</span><span class="si">%</span><span class="s">·▲】&amp;【]"</span><span class="p">,</span><span class="s">""</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">r"[\d（）《》〖〗&gt;&lt;‘’“”""''.,_:|-…]"</span><span class="p">,</span><span class="s">" "</span><span class="p">,</span><span class="n">text</span><span class="p">,</span><span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'</span><span class="se">\n</span><span class="s">+'</span><span class="p">,</span> <span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">'[，、：。；——]'</span><span class="p">,</span> <span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">' +'</span><span class="p">,</span> <span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">';'</span><span class="p">,</span> <span class="s">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+</code></pre></div></div>
+
+<h4 id="3-word-segment">3. word segment</h4>
+<ul>
+  <li>three approaches of word segment:
+    <ul>
+      <li>jieba——the most universal one</li>
+      <li><a href="http://thulac.thunlp.org/">thulac</a>, a efficient Chinese text segmentation tool developed by Tsinghua University</li>
+      <li><a href="https://github.com/lancopku/pkuseg-python">pkuseg</a>, a small package for Chinese word segmentation developed by Peking University</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">jieba</span>
+<span class="kn">import</span> <span class="nn">thulac</span> 
+<span class="kn">import</span> <span class="nn">pkuseg</span>
+
+<span class="k">def</span> <span class="nf">convert_doc_to_wordlist</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">tool</span> <span class="o">=</span> <span class="s">"jieba"</span><span class="p">,</span><span class="n">cut_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">mode</span> <span class="o">=</span> <span class="s">"accuracy"</span><span class="p">):</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">get_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    
+    <span class="n">sent_list</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">rm_char</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>                       <span class="c1"># 去掉一些字符，例如\u3000
+</span>    <span class="k">if</span> <span class="n">tool</span><span class="o">==</span><span class="s">"jieba"</span><span class="p">:</span>
+        <span class="n">jieba</span><span class="o">.</span><span class="n">load_userdict</span><span class="p">(</span><span class="s">"./code/dict.txt"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">"accuracy"</span><span class="p">:</span>
+            <span class="n">word_2dlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">rm_tokens</span><span class="p">(</span><span class="n">jieba</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">cut_all</span><span class="o">=</span><span class="n">cut_all</span><span class="p">))</span>
+                       <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">sent_list</span><span class="p">]</span>                     <span class="c1"># 分词
+</span>        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">"search"</span><span class="p">:</span>
+            <span class="n">word_2dlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">rm_tokens</span><span class="p">(</span><span class="n">jieba</span><span class="o">.</span><span class="n">cut_for_search</span><span class="p">(</span><span class="n">part</span><span class="p">))</span>
+                       <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">sent_list</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">tool</span><span class="o">==</span><span class="s">"thulac"</span><span class="p">:</span>
+        <span class="n">thu1</span> <span class="o">=</span> <span class="n">thulac</span><span class="o">.</span><span class="n">thulac</span><span class="p">(</span><span class="n">user_dict</span><span class="o">=</span><span class="s">"./code/dict_thu1.txt"</span><span class="p">,</span><span class="n">seg_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1">#只进行分词，不进行词性标注
+</span>        <span class="n">word_2dlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">rm_tokens</span><span class="p">(</span><span class="n">thu1</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">sent_list</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">tool</span><span class="o">==</span><span class="s">"pku"</span><span class="p">:</span>
+        <span class="n">seg</span> <span class="o">=</span> <span class="n">pkuseg</span><span class="o">.</span><span class="n">pkuseg</span><span class="p">(</span><span class="n">user_dict</span><span class="o">=</span><span class="s">"./code/dict_thu1.txt"</span><span class="p">)</span>
+        <span class="n">word_2dlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">rm_tokens</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">part</span><span class="p">))</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">sent_list</span><span class="p">]</span>
+    <span class="k">def</span> <span class="nf">rm_space_null</span><span class="p">(</span><span class="n">alist</span><span class="p">):</span>
+        <span class="n">alist</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">alist</span> <span class="k">if</span> <span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">""</span><span class="p">,</span><span class="s">" "</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="n">alist</span>
+    <span class="n">rm_space</span> <span class="o">=</span> <span class="p">[</span><span class="n">rm_space_null</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span> <span class="k">for</span> <span class="n">ws</span> <span class="ow">in</span> <span class="n">word_2dlist</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">rm_space</span>
+
+
+<span class="n">aspect</span> <span class="o">=</span> <span class="s">"物价"</span> <span class="c1">#一次处理一个类别的新闻
+</span><span class="n">path</span> <span class="o">=</span> <span class="s">"./raw_data/"</span><span class="o">+</span><span class="n">aspect</span>  
+<span class="n">file_name</span> <span class="o">=</span> <span class="s">"train.csv"</span>
+<span class="n">data_train</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">file_name</span><span class="p">),</span><span class="n">sep</span> <span class="o">=</span> <span class="s">","</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">engine</span><span class="o">=</span><span class="s">"python"</span><span class="p">)</span>
+<span class="n">data_test</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s">"test.csv"</span><span class="p">),</span><span class="n">sep</span> <span class="o">=</span> <span class="s">","</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">"gb18030"</span><span class="p">,</span><span class="n">engine</span><span class="o">=</span><span class="s">"python"</span><span class="p">)</span>
+<span class="n">data_train</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">data_train</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="n">data_train</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">data_train</span><span class="p">[</span><span class="s">"label"</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+
+<span class="n">full_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_train</span><span class="p">,</span><span class="n">data_test</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="n">full_data</span><span class="p">:</span>
+    <span class="n">clean_text</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">convert_doc_to_wordlist</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s">"title"</span><span class="p">],</span><span class="n">tool</span><span class="o">=</span><span class="s">"pku"</span><span class="p">,</span><span class="n">cut_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">mode</span> <span class="o">=</span><span class="s">"accuracy"</span><span class="p">)</span>
+    <span class="n">dataset</span><span class="p">[</span><span class="s">"word_seg"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">clean_text</span><span class="p">]</span>
+</code></pre></div></div>
+
+<h4 id="4-removing-high-or-low-frequency-words-optional">4. removing high or low frequency words (optional)</h4>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+
+<span class="k">def</span> <span class="nf">rm_low_high_freq</span><span class="p">(</span><span class="n">texts</span><span class="p">,</span><span class="n">low_freq</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">high_topK</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span><span class="c1">#texts为包含多个句子的列表
+</span>    <span class="n">whole_text</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+        <span class="n">whole_text</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+    <span class="n">frequency_dict</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">whole_text</span><span class="p">)</span>
+    <span class="n">frequency_dict</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">whole_text</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span> <span class="o">=</span> <span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1">#=True 降序排列
+#    print("the top %d wordcount is:\n" %(high_topK),frequency_dict[:high_topK],"/n")
+</span>    <span class="n">word_count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frequency_dict</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"原词典长度为</span><span class="si">%</span><span class="s">d"</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">word_count</span><span class="p">))</span>
+<span class="c1">#    high_freq_w = [wc[0] for wc in word_count[:high_topK]]
+</span>    <span class="n">low_freq_w</span> <span class="o">=</span> <span class="n">word_count</span><span class="p">[</span><span class="n">word_count</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="nb">str</span><span class="p">(</span><span class="n">low_freq</span><span class="p">),</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">dele_list</span> <span class="o">=</span> <span class="n">low_freq_w</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"现词典长度为</span><span class="si">%</span><span class="s">d"</span><span class="o">%</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">word_count</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">dele_list</span><span class="p">)))</span>
+<span class="c1">#    dele_list = high_freq_w+low_freq_w
+</span>    <span class="n">rm_freq_texts</span> <span class="o">=</span> <span class="p">[[</span><span class="n">token</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="k">if</span> <span class="n">token</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dele_list</span><span class="p">]</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">]</span>
+<span class="c1">#    sum(np.array(list(map(len,rm_freq_texts)))==1)
+</span>    <span class="n">dele_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span><span class="n">rm_freq_texts</span><span class="p">)))</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1">#哪些新闻被删得只剩0 个或1个词
+#    data.ix[dele_index,"title"]
+#    data = data.drop(dele_num,inplace = False)
+#    data = data.reset_index(drop=True)
+</span>    <span class="k">print</span><span class="p">(</span><span class="s">"删除词数少于1的新闻</span><span class="si">%</span><span class="s">d条"</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">dele_num</span><span class="p">))</span>
+    <span class="n">new_texts</span> <span class="o">=</span> <span class="p">[</span><span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">rm_freq_texts</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">new_texts</span>
+</code></pre></div></div>
+<h4 id="5-view-top-k-words-of-each-class">5. view top k words of each class</h4>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">jieba.analyse</span> <span class="kn">import</span> <span class="n">extract_tags</span>
+
+<span class="k">def</span> <span class="nf">view_keywords</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">word_name</span> <span class="o">=</span> <span class="s">"word_seg"</span><span class="p">,</span><span class="n">tag_name</span><span class="o">=</span><span class="s">"label"</span><span class="p">,</span><span class="n">topK</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="s">"用jieba看每个标签的关键词"</span>
+    <span class="k">def</span> <span class="nf">get_kw</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">extract_tags</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">topK</span><span class="o">=</span><span class="n">topK</span><span class="p">,</span> <span class="n">withWeight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">allowPOS</span><span class="o">=</span><span class="p">())</span>
+    <span class="n">text_groupbyLabel</span> <span class="o">=</span> <span class="p">[</span><span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">word_name</span><span class="p">][</span><span class="n">data</span><span class="p">[</span><span class="n">tag_name</span><span class="p">]</span><span class="o">==</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>  <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)]</span>
+    <span class="n">news_kw</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">get_kw</span><span class="p">,</span><span class="n">text_groupbyLabel</span><span class="p">))</span>
+    
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">第"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">+</span><span class="s">"类新闻的关键词：</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">])):</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p>For more information about this project,please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET
