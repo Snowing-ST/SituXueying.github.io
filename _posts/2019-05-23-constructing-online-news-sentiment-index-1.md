@@ -3,7 +3,7 @@ title: Constructing Online News Sentiment Index 1
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification]
+tags: [deep learning, text classification,crawl]
 ---
 
 
@@ -14,7 +14,7 @@ tags: [deep learning, text classification]
 
 <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 
-### <center>Introduction</center>
+## <center>Introduction</center>
 The Consumer Confidence Index is an indicator of the strength of consumer confidence. Since the first consumer confidence index was introduced in 1946, consumer confidence index surveys have often been conducted by means of telephone surveys or questionnaires. In recent years, the survey process has gradually led to some problems, such as the increase in the rate of refusal, and the proportion of elder interviewees is too large, which has a certain impact on the validity of the index. In addition to strengthen the quality control in the design and implementation of the index survey program, we can make a new interpretation of the problem through the big data mining method.
 
 With the rapid development of Internet technology, the Internet has replaced traditional paper media as the main channel for people to obtain and express opinions. The news reflects the public's emotional life status to varying degrees, and people's emotional state is also affected by network media to some extent. Following this intuitive logic, we attempts to construct a consumer confidence index based on online news texts by mining the emotional tendencies of consumers, thereby avoiding some problems in the traditional consumer confidence index survey, and it is timelier and thriftier. However, because there is no authoritative research to prove the direct connection between online news and consumer psychology and behavior, in order to avoid disputes, we refers to the consumer confidence index based on the online news as “Online News Sentiment Index”, which is not directly related to “consumers”, but can be used to measure the attitudes and opinions of consumers reflected in the news text.

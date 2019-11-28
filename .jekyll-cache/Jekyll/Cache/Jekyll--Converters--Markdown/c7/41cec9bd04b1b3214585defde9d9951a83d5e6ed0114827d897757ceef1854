@@ -1,0 +1,92 @@
+I"�2<p>scrapy优势：</p>
+<ol>
+  <li>新建爬虫项目时，只需改动原因框架一些内容，无需从头写代码</li>
+  <li>执行程序时，在一定范围内爬取出错自动跳过，不会打断程序，无需定义出错识别和处理办法</li>
+</ol>
+
+<h2 id="安装crapy">安装crapy</h2>
+
+<p>打开anaconda prompt，输入<code class="highlighter-rouge">pip install scrapy</code></p>
+
+<h2 id="新建scrapy项目newsspider">新建scrapy项目<code class="highlighter-rouge">newsSpider</code></h2>
+
+<h3 id="1-打开anaconda-promptcd到到指定文件夹输入scrapy-startproject-newsspider">1. 打开anaconda prompt，cd到到指定文件夹，输入：<code class="highlighter-rouge">scrapy startproject newsSpider</code>，</h3>
+<h3 id="2-再输入tree-newsspider可看到该文件夹中自动生成以下文件">2. 再输入<code class="highlighter-rouge">tree newsSpider</code>可看到该文件夹中自动生成以下文件：</h3>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>newsSpider/
+    scrapy.cfg            # deploy configuration file
+    newsSpider/             # project's Python module, you'll import your code from here
+        __init__.py
+        items.py          # project items definition file
+        middlewares.py    # project middlewares file
+        pipelines.py      # project pipelines file
+        settings.py       # project settings file
+        spiders/          # a directory where you'll later put your spiders
+            __init__.py
+</code></pre></div></div>
+<h3 id="3-最后cd到newsspidernewsspiderspiders中输入scrapy-genspider-traderwar-searchsinacomcn">3. 最后cd到<code class="highlighter-rouge">./newsSpider/newsSpider/spiders</code>中，输入<code class="highlighter-rouge">scrapy genspider TraderWar search.sina.com.cn</code></h3>
+<p>则生成<code class="highlighter-rouge">TraderWar.py</code>核心爬虫文件，其中有一行为<code class="highlighter-rouge">allowed_domains = ["search.sina.com.cn"]</code>，即指定了爬虫网站。</p>
+
+<h2 id="改写核心爬虫文件">改写核心爬虫文件</h2>
+
+<p><code class="highlighter-rouge">TraderWar.py</code> 初始代码如下所示：</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">scrapy</span>
+<span class="k">class</span> <span class="nc">TraderwarSpider</span><span class="p">(</span><span class="n">scrapy</span><span class="o">.</span><span class="n">Spider</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">"TraderWar"</span>
+    <span class="n">allowed_domains</span> <span class="o">=</span> <span class="p">[</span><span class="s">"search.sina.com.cn"</span><span class="p">]</span>
+    <span class="n">start_urls</span> <span class="o">=</span> <span class="p">[</span><span class="s">'http://search.sina.com.cn/'</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="k">pass</span>
+</code></pre></div></div>
+
+<h3 id="1-确定start_urls">1. 确定<code class="highlighter-rouge">start_urls</code></h3>
+<p>在浏览器中打开search.sina.com.cn，输入搜索词，如“中美贸易战”，点击搜索结果的第2页，得到网址
+http://search.sina.com.cn/?q=%D6%D0%C3%C0%C3%B3%D2%D7%D5%BD&amp;c=news&amp;from=index&amp;col=&amp;range=&amp;source=&amp;country=&amp;size=&amp;time=&amp;a=&amp;page=2&amp;pf=0&amp;ps=0&amp;dpc=1
+将page=2中的2替换成任一数字，则得到了每一页搜索的网址</p>
+
+<h3 id="2-提取每条新闻标题背后的链接">2. 提取每条新闻标题背后的链接</h3>
+<p>每一个搜索页面的网址将被传入到<code class="highlighter-rouge">parse</code>函数，在浏览器“检查”中查看网页源代码，找到每条新闻的标题链接的xpath路径，则可提取链接</p>
+<h3 id="3-指定页面内容中爬取的元素">3. 指定页面内容中爬取的元素</h3>
+<p>提取的新闻链接传入<code class="highlighter-rouge">parse_detail</code>函数，scrapy将自动访问这些链接（即新闻详情页），在浏览器“检查”中查看网页源代码，找到新闻标题、发布时间、来源、全文内容等的xpath路径，提取这些元素保存至<code class="highlighter-rouge">NewsspiderItem</code></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">scrapy</span>
+<span class="kn">from</span> <span class="nn">newsSpider.items</span> <span class="kn">import</span> <span class="n">NewsspiderItem</span>
+
+<span class="k">class</span> <span class="nc">TradewarSpider</span><span class="p">(</span><span class="n">scrapy</span><span class="o">.</span><span class="n">Spider</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">"TradeWar"</span>
+<span class="c1">#    allowed_domains = ["search.sina.com.cn"]
+</span>    <span class="n">start_urls</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s">'http://search.sina.com.cn/?q=</span><span class="si">%</span><span class="s">D6</span><span class="si">%</span><span class="s">D0</span><span class="si">%</span><span class="s">C3</span><span class="si">%</span><span class="s">C0</span><span class="si">%</span><span class="s">C3</span><span class="si">%</span><span class="s">B3</span><span class="si">%</span><span class="s">D2</span><span class="si">%</span><span class="s">D7</span><span class="si">%</span><span class="s">D5</span><span class="si">%</span><span class="s">BD&amp;c=news&amp;from=index&amp;col=&amp;range=&amp;source=&amp;country=&amp;size=&amp;time=&amp;a=&amp;page='</span><span class="o">+</span><span class="s">'</span><span class="si">%</span><span class="s">s&amp;pf=2131425448&amp;ps=2134309112&amp;dpc=1'</span> <span class="o">%</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">20</span><span class="p">))</span> <span class="c1">#设定只爬取前20页
+</span>            <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">href</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="result"]/div/div/h2/a/@href'</span><span class="p">):</span> <span class="c1">#提取页面中每条新闻的标题的链接
+</span>            <span class="n">full_url</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="n">href</span><span class="o">.</span><span class="n">extract</span><span class="p">())</span><span class="c1">#该链接是相对链接，要改成完整链接
+</span>            <span class="k">yield</span> <span class="n">scrapy</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">full_url</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parse_detail</span><span class="p">)</span>
+            
+    <span class="k">def</span> <span class="nf">parse_detail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//h1[@class="main-title"]/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="c1">#标题
+</span>        <span class="n">news</span> <span class="o">=</span> <span class="n">NewsspiderItem</span><span class="p">()</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">url</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//h1[@class="main-title"]/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="top_bar"]/div/div[2]/span/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"origin"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="top_bar"]/div/div[2]/a/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">()</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"origin_url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="top_bar"]/div/div[2]/a/@href'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">news</span><span class="p">[</span><span class="s">"detail"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//div[@class="article"]/div/p/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">())</span><span class="o">+</span>\
+        <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//div[@class="article"]/p/text()'</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">())</span><span class="o">+</span>\
+        <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//div[@class="article"]/div/div/text()'</span><span class="p">))</span>
+        <span class="k">yield</span> <span class="n">news</span>
+</code></pre></div></div>
+
+<h3 id="4-运行traderwarpy-并保存爬虫结果">4. 运行<code class="highlighter-rouge">TraderWar.py</code> 并保存爬虫结果</h3>
+
+<p>打开anaconda prompt，cd到newsSpider/newsSpider，运行<code class="highlighter-rouge">scrapy crawl TradeWar -o data.csv -s FEED_EXPORT_ENCODING=gbk</code></p>
+
+<p>或者，cd到newsSpider/newsSpider/spiders目录下，运行<code class="highlighter-rouge">scrapy runspider TradeWar.py -o data.csv -s FEED_EXPORT_ENCODING=gbk</code>
+<code class="highlighter-rouge">FEED_EXPORT_ENCODING=gbk</code>可解决csv文件中文乱码问题。</p>
+
+<p>爬取文件如下所示：
+<img src="../assets/images/post_images/news-crawl-result.png" alt="news-crawl-result" /></p>
+
+:ET

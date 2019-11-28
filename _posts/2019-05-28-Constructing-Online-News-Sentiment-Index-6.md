@@ -40,7 +40,7 @@ tags: [deep learning, text classification]
 #### 4. visualize the training process using tensorboard
 - tensorboard 注意路径不能有中文！！！
 - 用anaconda prompt打开，并切换到summaries的文件下，如：
-```
+```bash
 cd .\runs\1546591413\summaries
 tensorboard --logdir=run1:“train”,run2:"dev"
 ```

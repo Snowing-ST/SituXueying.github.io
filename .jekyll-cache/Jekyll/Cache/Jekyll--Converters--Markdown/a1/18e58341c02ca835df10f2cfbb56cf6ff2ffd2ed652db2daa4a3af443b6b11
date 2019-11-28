@@ -1,0 +1,67 @@
+I"�<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（六）<br />深度学习文本分类模型之用CNN RNN做文本分类</font>
+<style>
+    body {font-family: "华文中宋"}
+</style>
+
+<h2 id="main-step-6text-classification-with-deep-learning-cnn-rnn">Main step 6:<center>text classification with deep learning (CNN RNN)</center></h2>
+<h3 id="description">description:</h3>
+<ul>
+  <li>classification model ：CNN、RNN</li>
+  <li>best model ：CNN+word2vec, accuracy:84%</li>
+  <li>reference:
+    <ul>
+      <li><a href="https://arxiv.org/abs/1408.5882">Kim Y. Convolutional Neural Networks for Sentence Classification[J]. Eprint Arxiv, 2014.</a></li>
+      <li><a href="https://github.com/dennybritz/cnn-text-classification-tf">Convolutional Neural Network for Text Classification in Tensorflow</a></li>
+      <li><a href="http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/">Implementing a CNN for Text Classification in TensorFlow</a></li>
+      <li><a href="https://arxiv.org/abs/1510.03820v3">Ye Zhang, Byron Wallace. A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural Networks for Sentence Classification[J]. Eprint Arxiv, 2015.</a></li>
+      <li><a href="https://github.com/gaussic/text-classification-cnn-rnn">CNN-RNN中文文本分类，基于TensorFlow</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="code-explanation">code explanation:</h3>
+<h4 id="1-transform-news-data-into-3d-word2vec-and-generates-a-batch-iterator">1. transform news data into 3D word2vec and generates a batch iterator</h4>
+
+<ul>
+  <li>please see <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_CNN_data_helpers.py">w2v_CNN_data_helpers.py</a></li>
+</ul>
+
+<h4 id="2-cnn-text-classification-model">2. CNN text classification model</h4>
+
+<ul>
+  <li>please see <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_CNN.py">w2v_CNN.py</a></li>
+</ul>
+
+<h4 id="3-train-the-cnn-by-using-word2vec-3d-matrix">3. train the CNN by using word2vec 3D matrix</h4>
+<ul>
+  <li>input:<code class="highlighter-rouge">train.csv</code></li>
+  <li>output: model training process saved in <code class="highlighter-rouge">.\runs\1546591413\summaries</code></li>
+  <li>please see <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_CNN_train.py">w2v_CNN_train.py</a></li>
+</ul>
+
+<h4 id="4-visualize-the-training-process-using-tensorboard">4. visualize the training process using tensorboard</h4>
+<ul>
+  <li>tensorboard 注意路径不能有中文！！！</li>
+  <li>用anaconda prompt打开，并切换到summaries的文件下，如：
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> .<span class="se">\r</span>uns<span class="se">\1</span>546591413<span class="se">\s</span>ummaries
+tensorboard <span class="nt">--logdir</span><span class="o">=</span>run1:“train”,run2:<span class="s2">"dev"</span>
+</code></pre></div>    </div>
+  </li>
+  <li>用浏览器打开 http://your_computer_name:6006/</li>
+  <li>每一次改动都要重启prompt</li>
+</ul>
+
+<h4 id="5-tag-unlabel-testcsv-with-cnn-model">5. tag unlabel <code class="highlighter-rouge">test.csv</code> with CNN model</h4>
+<ul>
+  <li>input: <code class="highlighter-rouge">test.csv</code>,final model saved in <code class="highlighter-rouge">code/runs/1546591413/checkpoints</code></li>
+  <li>output: <code class="highlighter-rouge">data_test.csv</code>, a test data with predicted labels</li>
+  <li>please see <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_CNN_eval.py">w2v_CNN_eval.py</a></li>
+</ul>
+
+<h4 id="6-text-classification-with-rnn">6. text classification with RNN</h4>
+<ul>
+  <li>please see <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_RNN.py">RNN.py</a>,<a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index/blob/master/6%20word2vec%2BSVM_CNN/w2v_RNN_train.py">RNN_train.py</a>,which is different from CNN</li>
+</ul>
+
+<p>For more information about this project, please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+:ET

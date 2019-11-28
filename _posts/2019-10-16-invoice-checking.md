@@ -5,10 +5,6 @@ layout: post
 ---
 <font face="仿宋" >半自动国税发票查验，“半自动”指验证码还需手动填写o(╥﹏╥)o</font>
 
-<style>
-    body {font-family: "华文中宋"}
-</style>
-
 <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 
 ### 代码步骤

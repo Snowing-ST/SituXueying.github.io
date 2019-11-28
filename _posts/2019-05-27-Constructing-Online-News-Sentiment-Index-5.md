@@ -3,7 +3,7 @@ title: Constructing Online News Sentiment Index 5
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification]
+tags: [deep learning, text classification, NLP]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（五）<br>深度学习文本分类模型之用word2vec做文本表示</font>
