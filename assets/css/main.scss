@@ -3,26 +3,86 @@
 ---
 @import "jekyll-theme-prologue";
 // for tag cloud and archives
+/*  Tag Box  */
+.tag-box-wrapper {
+  overflow: hidden;
+}
+.tag-box-wrapper .tag-box {
+  float: left;
+  margin-right: 10px;
+}
+.tag-box li i {
+  opacity: .9;
+  line-height: 32px;
+}
+.tag-box a {
+  position: relative;
+  padding: 4px 6px;
+  margin: 2px;
+  background: #eee;
+  color: #555;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  text-decoration: none;
+  border: 1px dashed #cccccc;
+  behavior: url({{ ASSET_DIR }}/css/PIE.htc);
+}
+.tag-box a span { vertical-align: super; font-size: .8em; }
+.tag-box a:hover { background-color: #e5e5e5; }
+.tag-box a.active {
+  background: #57A957;
+  border: 1px solid #4c964d;
+  color: #FFF;
+}
+.inline {
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+}
+.inline li {
+  float: left;
+  position: relative;
+  margin-left: 10px;
+  line-height: 30px;
+}
+
+/*  Widgets  */
+#tag-cloud, #contacts-list {
+  margin-left: 40px;
+  margin-right: 20px;
+  margin-bottom: 15px;
+}
+#tag-cloud a {
+  display: inline-block;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+#tag-cloud a:hover { color: #ae432e !important; }
+#contacts-list { margin-top: 6px; }
+#fixed-container { width: 271px; }
+
+// for tag cloud and archives
 .tag-cloud {
-    list-style: none;
-    padding: 0;
-    text-align: justify; 
-    font-size: 16px;
-    li {
-      display: inline-block;
-      margin: 0 12px 12px 0; 
-    }
+  list-style: none;
+  padding: 0;
+  text-align: justify; 
+  font-size: 16px;
+  li {
+    display: inline-block;
+    margin: 0 12px 12px 0; 
   }
-  #archives {
-    padding: 5px;
-  }
-  .archive-group {
-    margin: 5px;
-    border-top: 1px solid #ddd;
-  }
-  .archive-item {
-    margin-left: 5px;
-  }
-  .post-tags {
-    text-align: right;
-  }
+}
+#archives {
+  padding: 5px;
+}
+.archive-group {
+  margin: 5px;
+  border-top: 1px solid #ddd;
+}
+.archive-item {
+  margin-left: 5px;
+}
+.post-tags {
+  text-align: right;
+}

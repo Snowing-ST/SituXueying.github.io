@@ -9,6 +9,7 @@ tags: [social network,link prediction]
 
 本文通过利用Facebook用户好友数据，对原始数据按不同比例划分训练集和测试集，使用基于相似度的算法分别对数据计算局域指标、全局指标、准局域指标的相似性得分，并通过特征曲线下面积（AUC）和精确度（Precision）两个评估指标来评估算法的准确度，从而检测几种链路预测方法的稳定性和敏感性，判断每种相似度计算的适用情况。
 
+
 ## facebook网络数据的来源与说明
 
 本文所使用的的数据集来源于斯坦福大学的snap网络项目中的[ego-Facebook](http://snap.stanford.edu/data/egonets-Facebook.html)数据集，这个数据集由10个子网络构成，每个子网络代表不同用户ID的Facebook好友网络。该数据共有4039个节点，88234条边，点从0开始计数，为无向网络。
@@ -166,3 +167,4 @@ Sorenson指标在数据的3个不同划分下precision值最大，局域指标�
 本文代码参见我的[github](https://github.com/Snowing-ST/Unstructured-Data-Analysis)
 
 懒得搬运了╮(╯▽╰)╭
+

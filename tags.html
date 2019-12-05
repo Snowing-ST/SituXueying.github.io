@@ -3,23 +3,25 @@ title: Tags
 layout: "page"
 permalink: /tags/
 icon: fa-tags
-order: 3
+order: 4
 ---
+
+
 <ul class="tag-cloud">
 {% for tag in site.tags %}
-  <li style="font-size: {{ tag | last | size | times: 100 | divided_by: site.tags.size | plus: 70  }}%">
+  <li style="font-size: {{ tag | last | size | times: 500 | divided_by: site.tags.size | plus: 70  }}%">
     <a href="#{{ tag | first | slugize }}">
       {{ tag | first }}
     </a>
   </li>
 {% endfor %}
 </ul>
-
+<!--
 <div id="archives">
 {% for tag in site.tags %}
   <div class="archive-group">
     {% capture tag_name %}{{ tag | first }}{% endcapture %}
-    <h3 id="#{{ tag_name | slugize }}">{{ tag_name }}</h3>
+    <h3 id="#{{ tag_name | slugize }}">{{ tag_name }}   (</span>{{ tag | last | size }}</span>) </h3>
     <a name="{{ tag_name | slugize }}"></a>
     {% for post in site.tags[tag_name] %}
 
@@ -29,29 +31,19 @@ order: 3
   </div>
 {% endfor %}
 </div>
+-->
 
-<style>
-.tag-cloud {
-  list-style: none;
-  padding: 0;
-  text-align: justify; 
-  font-size: 16px;
-  li {
-    display: inline-block;
-    margin: 0 12px 12px 0; 
-  }
-}
-#archives {
-  padding: 5px;
-}
-.archive-group {
-  margin: 5px;
-  border-top: 1px solid #ddd;
-}
-.archive-item {
-  margin-left: 5px;
-}
-.post-tags {
-  text-align: right;
-}
-</style>
+{% include JB/setup %}
+<!--
+<ul class="tag-box inline" style="margin-bottom: 20px;">
+  {% assign tags_list = site.tags %}
+  {% include JB/tags_list %}
+</ul>
+-->
+{% for tag in site.tags %} 
+<h2 id="{{ tag[0] }}-ref">{{ tag[0] }}</h2>
+<ul>
+  {% assign pages_list = tag[1] %}
+  {% include JB/pages_list %}
+</ul>
+{% endfor %}
