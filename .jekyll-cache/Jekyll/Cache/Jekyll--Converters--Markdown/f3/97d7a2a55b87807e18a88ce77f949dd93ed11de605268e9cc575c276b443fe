@@ -1,0 +1,581 @@
+I"�1<p>使用文本聚类的方式提取每条实习信息中描述专业技能的句子</p>
+
+<h1 id="基于文本聚类的招聘信息中技能要求提取与量化">《基于文本聚类的招聘信息中技能要求提取与量化》</h1>
+
+<ul>
+  <li>上篇 <a href="Extracting-Skill-Imformation-from-recruitment-ADs-with-text-clustering-1.html">实习僧爬虫与招聘信息文本预处理</a></li>
+  <li>
+    <font color="pink">中篇 招聘信息文本聚类</font>
+  </li>
+  <li>下篇 <a href="Extracting-Skill-Imformation-from-recruitment-ADs-with-text-clustering-3.html">量化薪资与技能的关系</a></li>
+</ul>
+
+<h2 id="文本聚类">文本聚类</h2>
+<p>本研究中文本向量化采用tf-idf，用稀疏方式储存词-文档矩阵。矩阵维度为t*n，t代表句子个数，n代表词语个数。 本文预处理后的词汇有1793个，句子2817条，提取1000个tf-idf特征，得到 2817*1000的文档词频矩阵。下面将用三种聚类方法对“职位描述”中的句子进行聚类，根据聚类结果的解释性选择聚类数目。</p>
+
+<h4 id="1kmeans聚类">1.Kmeans聚类</h4>
+
+<p>Kmeans是一种基于相似度的聚类方法。在聚类之前，需要用户显式地定义一个相似度函数。聚类算法根据相似度的计算结果将相似的文本分在同一个组。在这种聚类模式下，每个文本只能属于一个组,这种聚类方法也叫“硬聚类”。 K-Means方法是MacQueen1967年提出的，原理是给定一个数据集合X和一个整数K（K&lt;n），K-Means方法将X分成K个聚类并使得在每个聚类中所有值与该聚类中心距离的总和最小。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#kmeans tfidf 文本聚类---------------------------------------------------
+</span><span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">HashingVectorizer</span><span class="p">,</span><span class="n">TfidfVectorizer</span>
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span><span class="p">,</span><span class="n">MiniBatchKMeans</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+
+
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"/Users/situ/Documents/EDA/final"</span><span class="p">)</span>
+<span class="c1">#os.chdir("E:/graduate/class/EDA/final")
+</span>
+
+<span class="k">def</span> <span class="nf">loadDataset</span><span class="p">(</span><span class="n">myfile</span><span class="p">):</span>
+    <span class="s">'''导入文本数据集'''</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">myfile</span><span class="p">,</span><span class="s">'r'</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"utf-8"</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+<span class="c1">#        print(line)
+</span>        <span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">dataset</span>
+
+<span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+    <span class="n">vectorizer</span> <span class="o">=</span> <span class="n">TfidfVectorizer</span><span class="p">(</span><span class="n">max_df</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_features</span><span class="o">=</span><span class="n">n_features</span><span class="p">,</span> <span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">use_idf</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span>
+
+<span class="k">def</span> <span class="nf">knn_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">true_k</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">minibatch</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span><span class="n">showLable</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+    <span class="c1">#使用采样数据还是原始数据训练k-means，    
+</span>    <span class="k">if</span> <span class="n">minibatch</span><span class="p">:</span><span class="c1">#数据多时用，如大于1万条样本
+</span>        <span class="n">km</span> <span class="o">=</span> <span class="n">MiniBatchKMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">true_k</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s">'k-means++'</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                             <span class="n">init_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">km</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">true_k</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s">'k-means++'</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">random_state</span><span class="o">=</span><span class="mi">1994</span><span class="p">)</span>
+    <span class="n">km</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>    
+    <span class="k">if</span> <span class="n">showLable</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Top terms per cluster:"</span><span class="p">)</span>
+        <span class="n">order_centroids</span> <span class="o">=</span> <span class="n">km</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">()</span>
+        <span class="k">print</span> <span class="p">(</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">get_stop_words</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">true_k</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"Cluster </span><span class="si">%</span><span class="s">d:"</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s">''</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">order_centroids</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:</span><span class="mi">20</span><span class="p">]:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">' </span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="n">terms</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="s">''</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">()</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+    <span class="k">print</span> <span class="p">(</span><span class="s">'Cluster distribution:'</span><span class="p">)</span>
+    <span class="k">print</span> <span class="p">(</span><span class="nb">dict</span><span class="p">([(</span><span class="n">i</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">km</span>
+    
+<span class="k">def</span> <span class="nf">test</span><span class="p">():</span>
+    <span class="s">'''测试选择最优参数'''</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">loadDataset</span><span class="p">(</span><span class="s">'clean_text.txt'</span><span class="p">)</span>    
+    <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="si">%</span><span class="s">d documents"</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+    <span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+    <span class="n">true_ks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">15</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span>        
+        <span class="n">score</span> <span class="o">=</span> <span class="o">-</span><span class="n">knn_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">true_k</span><span class="o">=</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+        <span class="k">print</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">score</span><span class="p">)</span>
+        <span class="n">true_ks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">true_ks</span><span class="p">,</span><span class="n">scores</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s">"score"</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="s">"red"</span><span class="p">,</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">"n_features"</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">"score"</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="s">'''在最优参数下输出聚类结果'''</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">loadDataset</span><span class="p">(</span><span class="s">'clean_text.txt'</span><span class="p">)</span>
+    <span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">km</span> <span class="o">=</span> <span class="n">knn_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">true_k</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">showLable</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="o">-</span><span class="n">km</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+    <span class="k">print</span> <span class="p">(</span><span class="n">score</span><span class="p">)</span>
+    <span class="n">test</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>  
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">loadDataset</span><span class="p">(</span><span class="s">'clean_text.txt'</span><span class="p">)</span>
+<span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>    
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">km</span> <span class="o">=</span> <span class="n">knn_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">true_k</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">showLable</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  
+<span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"time cost:"</span><span class="p">,</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>  
+<span class="n">km</span><span class="o">.</span><span class="n">labels_</span><span class="c1">#第5类是技能要求
+</span>
+<span class="c1">#关键词和权重
+</span><span class="n">order_centroids</span> <span class="o">=</span> <span class="n">km</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="p">)[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="c1">#argsort()将每行数组的值从小到大排序后，并按照其相对应的索引值输出.
+#argsort()[:, ::-1] 将每行数组的值从大到小排序后，并按照其相对应的索引值输出.
+#np.sort(km.cluster_centers_)[:, ::-1] 把每行数组的值从大到小排序
+</span><span class="n">terms</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">()</span> <span class="c1">#list
+</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="n">csvfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">"term_weight_km.csv"</span><span class="p">,</span><span class="s">'w'</span><span class="p">,</span><span class="n">newline</span><span class="o">=</span><span class="s">''</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">'utf-8-sig'</span><span class="p">)</span> 
+<span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">csvfile</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">terms</span><span class="p">[</span><span class="n">order_centroids</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]],</span><span class="n">weights</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">],</span><span class="n">j</span><span class="p">])</span>
+<span class="n">csvfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>经过多次尝试不同的聚类个数，发现把聚类个数定为6类时，能取得较好的聚类效果，即各个类别的文本能表达清晰明确的共同含义。图1中六个词云图展示了kmeans聚类的每个聚类中心的关键词，关键词大小与kmeans输出的权重大小有关。可以看到，前最上方的两张词云图都是描述日常工作任务，权重大的词有“整理”、“研究”、“相关”、“用户”、“数据处理”，“完成”、“项目”、“整理”、“收集”。中间左图中，权重大的词有“接收”、“暑期实习”、“每周”、“四天”等，可以看出这个类别的句子是跟实习时间有关。</p>
+
+<p>中间右图中出现了很多数据分析常用的软件，如“python”、“excel”、“sql”、“spss”、“sas”，说明这个类别的句子是描述专业技能的，从中可以看出，office软件仍然是最为基础的要求，同时也要求应聘者能熟练掌握sql语言、使用数据库，当python、R软件等编程软件兴起时，像sas、spss等传统的统计分析软件仍然占据半壁江山，另外还有些数据分析实习要求掌握大数据相关的软件如hadoop、hive等。</p>
+
+<p>最下方左图中权重大词有“逻辑思维”、“沟通”、“责任心”、“团队精神”、“细心”等，说明这些品质是数据分析岗最为看重的。最下方右图则是对应聘者的学历、专业的要求描述，要求最多的专业是“统计学”、“数学”。</p>
+
+<p><img src="/assets/images/post_images/tagxedo.png" /></p>
+
+<h4 id="2gmm聚类">2.GMM聚类</h4>
+<p>GMM聚类是一种基于模型的聚类方法，它并不要求每个文本只属于一个组，而是给出一个文本属于不同组的概率。这种聚类方法也叫“软聚类”。这类方法通常假设数据满足一定的概率分布，聚类的过程就是要尽力找到数据与模型之间的拟合点。GMM假设数据服从高斯混合分布（Gaussian Mixture Distribution），
+GMM中的k个组件对应于k个族，所以GMM聚类的过程实际上是以似然函数作为评分函数，求使得似然函数最大化的k组$\omega$ ,$\mu$,$\Sigma$ 参数。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#GMM 文本聚类——————————————————————————————————————————————————————————————
+</span><span class="kn">from</span> <span class="nn">sklearn.mixture</span> <span class="kn">import</span> <span class="n">GaussianMixture</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">HashingVectorizer</span><span class="p">,</span><span class="n">TfidfVectorizer</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="c1">#os.chdir("E:/graduate/class/EDA/final")
+</span><span class="s">"""
+tfidf 提取1000维特征时，GMM输出的概率不是0就是1
+不知道是否降维后GMM可以输出概率？？？
+"""</span>
+<span class="k">def</span> <span class="nf">loadDataset</span><span class="p">(</span><span class="n">myfile</span><span class="p">):</span>
+    <span class="s">'''导入文本数据集'''</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">myfile</span><span class="p">,</span><span class="s">'r'</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"utf-8"</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+<span class="c1">#        print(line)
+</span>        <span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">dataset</span>
+
+<span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+    <span class="n">vectorizer</span> <span class="o">=</span> <span class="n">TfidfVectorizer</span><span class="p">(</span><span class="n">max_df</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_features</span><span class="o">=</span><span class="n">n_features</span><span class="p">,</span> <span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">use_idf</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span>
+
+<span class="k">def</span> <span class="nf">gmm_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">n_components</span><span class="p">,</span><span class="n">showLable</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+ 
+    <span class="n">gmmModel</span> <span class="o">=</span> <span class="n">GaussianMixture</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s">'full'</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">gmmModel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">toarray</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">showLable</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Top terms per cluster:"</span><span class="p">)</span>
+        <span class="n">order_centroids</span> <span class="o">=</span><span class="n">gmmModel</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">()</span>
+        <span class="k">print</span> <span class="p">(</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">get_stop_words</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"Cluster </span><span class="si">%</span><span class="s">d:"</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s">''</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">order_centroids</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:</span><span class="mi">20</span><span class="p">]:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">' </span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="n">terms</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="s">''</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">()</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">gmmModel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">toarray</span><span class="p">()))</span> <span class="c1">#标签
+</span>        <span class="k">print</span> <span class="p">(</span><span class="s">'Cluster distribution:'</span><span class="p">)</span>
+        <span class="k">print</span> <span class="p">(</span><span class="nb">dict</span><span class="p">([(</span><span class="n">i</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">gmmModel</span>
+    
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">loadDataset</span><span class="p">(</span><span class="s">'clean_text.txt'</span><span class="p">)</span>
+<span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">n_features</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>   
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">gmmModel</span> <span class="o">=</span> <span class="n">gmm_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">vectorizer</span><span class="p">,</span><span class="n">n_components</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">showLable</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1">#聚成7类以上是可以接受的结果 
+</span><span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"time cost:"</span><span class="p">,</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>  
+<span class="n">gmm_labels</span> <span class="o">=</span> <span class="n">gmmModel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">toarray</span><span class="p">())</span><span class="c1">#第3类是技能要求
+#p = gmmModel.predict_proba(X.toarray())
+#np.round(p,2)
+#
+#print(gmmModel.weights_)
+#print(gmmModel.means_)
+#print(gmmModel.covariances_)
+</span>
+
+
+<span class="c1">#用jieba提取关键词
+</span><span class="kn">from</span> <span class="nn">jieba.analyse</span> <span class="kn">import</span> <span class="n">extract_tags</span>
+
+<span class="k">def</span> <span class="nf">get_labels_kw</span><span class="p">(</span><span class="n">clean_text</span><span class="p">,</span><span class="n">labels</span><span class="p">,</span><span class="n">name</span><span class="p">,</span> <span class="n">topK</span><span class="o">=</span><span class="mi">15</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_label_i</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">clean_text</span> <span class="o">=</span> <span class="n">clean_text</span><span class="p">,</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">):</span> 
+        <span class="s">"""获取不同标签的文本"""</span>
+        <span class="n">j</span><span class="o">=</span><span class="mi">0</span>
+        <span class="n">period_i</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">clean_text</span><span class="p">))):</span>
+            <span class="k">if</span> <span class="n">labels</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">period_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clean_text</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"标签</span><span class="si">%</span><span class="s">d有</span><span class="si">%</span><span class="s">d条文本"</span><span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">period_i</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">period_i</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_kw</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">extract_tags</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">topK</span><span class="o">=</span><span class="n">topK</span><span class="p">,</span> <span class="n">withWeight</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">allowPOS</span><span class="o">=</span><span class="p">())</span>
+    
+    <span class="n">period_text</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">get_label_i</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels</span><span class="p">)))</span>
+    <span class="n">news_kw</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">get_kw</span><span class="p">,</span><span class="n">period_text</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="si">%</span><span class="s">s方法第</span><span class="si">%</span><span class="s">d个类别的关键词：</span><span class="se">\n</span><span class="s">"</span><span class="o">%</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">])):</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+ 
+<span class="n">get_labels_kw</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">gmm_labels</span><span class="p">,</span><span class="s">"gmm"</span><span class="p">)</span>    <span class="c1">#第一类是技能要求
+</span></code></pre></div></div>
+
+<p>由于文本聚类的稀疏性，且本文所使用句子都有明显的特征，因此GMM聚类后给出的每个句子的概率都十分接近0或1，相当于kmeans的效果。经过多次尝试不同的聚类个数，发现把聚类个数定为8类时，能取得较好的聚类效果，各个类别的关键词能体现明确的文本摘要。</p>
+
+<p>表5展示了每个聚类中心的关键词。从类别的样本分布可以看出，除类别3有1000多条样本外，其他类别样本分布均匀。说明职位描述中，篇幅最大的是日常工作任务描述。</p>
+
+<p>从表中关键词可以看出，第1、6类是专业技能描述，第2、 3、 8类是任务描述，第4类是实习时间描述，第5类是专业、学历描述，第7类是通用技能、品质描述。另外，尽管第1、6类是专业技能描述，但却略有不同，第1类出现的软件为python、java、hive、hadoop，还出现了算法、数据挖掘、机器学习等词，说明此类职位描述的对编程、对分布式、算法要求更高些，而第6类则只是要求应聘者会office办公软件，以及传统的sas、spss统计分析软件，也要求python。这说明数据分析岗仍可以往下细分为普通统计分析和偏向算法工程师的数据分析。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>类别</th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>样本数</td>
+      <td>212</td>
+      <td>179</td>
+      <td>1163</td>
+      <td>202</td>
+      <td>220</td>
+      <td>209</td>
+      <td>301</td>
+      <td>331</td>
+    </tr>
+    <tr>
+      <td>关键词</td>
+      <td>熟悉 了解 python sql 一定 工具 数据挖掘 熟练掌握 一种 算法 掌握 语言 经验 方法 hive 数据库 java hadoop 常用 机器学习</td>
+      <td>提供 支持 运营 产品 决策 日常 报告 部门 协助 报表 公司 提供数据 相关 团队 需求 包括 优化 指标 建议 用户</td>
+      <td>相关 完成 经验 项目 协助 公司 报告 整理 研究 参与 行业 部门 维护 系统 学习 管理 撰写 产品 问题 平台</td>
+      <td>实习 以上 每周 至少 接受 长期 时间 暑期实习 保证 一周 实习期 能够 天及 转正 经验 工作日 全职 期间 考虑 四天</td>
+      <td>数学 以上学历 相关专业 本科 计算机 统计学 专业  硕士 研究生 金融 经济学 在读 全日制  大学本科</td>
+      <td>使用 熟练 excel sql 软件 ppt 办公软件 python 工具 熟悉 office 操作 spss 熟练掌握 常用 掌握 精通 sas 运用</td>
+      <td>沟通 良好 具备 学习 责任心 逻辑思维 较强 团队协作 敏感 团队 协调 逻辑 合作精神 表达能力 优秀 敏感度 抗压 善于 精神</td>
+      <td>进行 需求 用户 提出 整理 协助 产品 报告 模型 相关 项目 理解 挖掘 行为 优化 收集 建议 业务部门 信息 研究</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="3nmf聚类">3.NMF聚类</h4>
+<p>NMF是一种非线性降维方法，降维后的矩阵相当于对原文档词频矩阵进行了特征提取，过滤噪声特征项，因此提取的特征更能反映样本的局部特征，聚类效果更好。NMF聚类的结果如表6所示，可以看到NMF仅聚成5个类别，即可使每个类别的文本有清晰明确的文本摘要。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># NMF-based clustering-------------------------------------------------
+#    ||X - UVT||
+</span><span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">NMF</span>
+<span class="kn">from</span> <span class="nn">numpy.linalg</span> <span class="kn">import</span> <span class="n">norm</span>
+
+<span class="k">def</span> <span class="nf">nmf_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">n_components</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">NMF</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s">'random'</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">VT</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">components_</span>    
+    
+    <span class="c1">#1000个词，k = 10，文档数2772
+</span>    <span class="c1"># 归一化
+</span>    <span class="n">V</span> <span class="o">=</span> <span class="n">VT</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="n">nu</span><span class="p">,</span><span class="n">pu</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">nv</span><span class="p">,</span><span class="n">pv</span> <span class="o">=</span> <span class="n">V</span><span class="o">.</span><span class="n">shape</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nv</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pv</span><span class="p">):</span>
+            <span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span><span class="o">*</span><span class="n">norm</span><span class="p">(</span><span class="n">U</span><span class="p">[:,</span><span class="n">j</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pu</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span><span class="o">/</span><span class="n">norm</span><span class="p">(</span><span class="n">U</span><span class="p">[:,</span><span class="n">j</span><span class="p">])</span>
+    <span class="c1">#使用矩阵H来决定每个文档的归类。那个文档di的类标为m，当：m = argmaxj{vij}
+</span>    <span class="n">V</span><span class="o">.</span><span class="n">shape</span> <span class="c1">#(2773, 10)
+</span>    <span class="n">nmf_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">,</span><span class="n">V</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">nmf_labels</span>
+
+<span class="kn">from</span> <span class="nn">jieba.analyse</span> <span class="kn">import</span> <span class="n">extract_tags</span>
+
+<span class="k">def</span> <span class="nf">get_labels_kw</span><span class="p">(</span><span class="n">clean_text</span><span class="p">,</span><span class="n">labels</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">topK</span><span class="o">=</span><span class="mi">15</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_label_i</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">clean_text</span> <span class="o">=</span> <span class="n">clean_text</span><span class="p">,</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">):</span> 
+        <span class="s">"""获取不同标签的文本"""</span>
+        <span class="n">j</span><span class="o">=</span><span class="mi">0</span>
+        <span class="n">period_i</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">clean_text</span><span class="p">))):</span>
+            <span class="k">if</span> <span class="n">labels</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">period_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clean_text</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"标签</span><span class="si">%</span><span class="s">d有</span><span class="si">%</span><span class="s">d条文本"</span><span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">period_i</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">period_i</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_kw</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">extract_tags</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">topK</span><span class="o">=</span><span class="n">topK</span><span class="p">,</span> <span class="n">withWeight</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">allowPOS</span><span class="o">=</span><span class="p">())</span>
+    
+    <span class="n">period_text</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">get_label_i</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels</span><span class="p">)))</span>
+    <span class="n">news_kw</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">get_kw</span><span class="p">,</span><span class="n">period_text</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="si">%</span><span class="s">s方法第</span><span class="si">%</span><span class="s">d个类别的关键词：</span><span class="se">\n</span><span class="s">"</span><span class="o">%</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">])):</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">news_kw</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+            
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>     
+<span class="n">nmf_labels</span> <span class="o">=</span> <span class="n">nmf_train</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">n_components</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="c1">#聚成5/6/7类的效果还行
+</span><span class="n">get_labels_kw</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span><span class="n">nmf_labels</span><span class="p">,</span><span class="s">"nmf"</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span>   <span class="c1">#第0类是技能要求  
+</span><span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"time cost:"</span><span class="p">,</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>  
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>类别</th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>样本数</td>
+      <td>275</td>
+      <td>1355</td>
+      <td>389</td>
+      <td>480</td>
+      <td>318</td>
+    </tr>
+    <tr>
+      <td>关键词</td>
+      <td>以上学历   专业   本科   数学   统计学   相关   计算机   统计   在读   研究生   专业本科   全日制   硕士   大三   金融</td>
+      <td>协助   相关   数据挖掘   进行   运营   报告   需求   用户   整理   项目   产品   完成   报表   建模   支持</td>
+      <td>excel   熟练   sql   python   使用   软件   熟悉   ppt   熟练掌握   工具   sas   office   办公   spss   数据库</td>
+      <td>沟通   良好   团队   具备   学习   责任心   逻辑思维   精神   具有   逻辑   合作   表达能力   较强   抗压   敏感</td>
+      <td>实习   每周   以上   暑期   至少   接受   时间   长期   实习期   转正   保证   一周   全职   实习生</td>
+    </tr>
+    <tr>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="聚类方法的比较">聚类方法的比较</h2>
+<h4 id="1聚类效果">1.聚类效果</h4>
+<p>从以上展示的聚类效果来看，NMF的聚类类别最少，仅5类就可以使得每个类别具有明确清晰的，符合预先设想的文本摘要。
+从聚类算法运行速度来看，同样都是从python中sklearn调用的函数，NMF最快,仅需要0.46s；kmeans与之相差无几，需0.56s， GMM最慢，需要16.78s才能运行完毕。</p>
+<h4 id="2兰德指数">2.兰德指数</h4>
+<p>兰德指数是一种基于聚类相似度的评价指标，它通过观察一对样本点xi,yi在两种聚类方法中是否被分在同一个类别来判断两种聚类方法的相似性。从表7可以看出，GMM、kmeans与NMF的聚类效果相似度低，兰德指数少于0.3；kmeans和GMM的聚类效果较相似，两者的兰德指数为0.43，说明两者中有43%对样本点是分在了同一个类别或不在同一个类别。这可能是因为GMM是k-Means方法的概率变种，其基本算法框架和k-Means类似，都是通过多次迭代逐步改进聚类结果的质量。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#聚类效果比较——————————————————————————————————————————————————————————
+# 兰德指数：比较聚类效果的相似性
+</span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">adjusted_rand_score</span>  
+<span class="n">adjusted_rand_score</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">labels_</span><span class="p">,</span><span class="n">gmm_labels</span><span class="p">)</span>    <span class="c1">#相似度低。。
+</span><span class="n">adjusted_rand_score</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">labels_</span><span class="p">,</span><span class="n">nmf_labels</span><span class="p">)</span>     
+<span class="n">adjusted_rand_score</span><span class="p">(</span><span class="n">gmm_labels</span><span class="p">,</span><span class="n">nmf_labels</span><span class="p">)</span>       
+<span class="c1"># 轮廓系数
+</span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">silhouette_score</span>
+<span class="n">silhouette_score</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">km</span><span class="o">.</span><span class="n">labels_</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s">'euclidean'</span><span class="p">)</span>
+<span class="n">silhouette_score</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">gmm_labels</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s">'euclidean'</span><span class="p">)</span>
+<span class="n">silhouette_score</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">nmf_labels</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s">'euclidean'</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>兰德指数</th>
+      <th style="text-align: center">Kmeans</th>
+      <th style="text-align: right">GMM</th>
+      <th>NMF</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Kmeans</td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: right"> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>GMM</td>
+      <td style="text-align: center">0.4310</td>
+      <td style="text-align: right"> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>NMF</td>
+      <td style="text-align: center">0.2480</td>
+      <td style="text-align: right">0.2862</td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="lda聚类">LDA聚类</h2>
+<h4 id="1-主题数为6时各个主题的关键词能形成明确的文本摘要">1. 主题数为6时各个主题的关键词能形成明确的文本摘要</h4>
+<p>聚类结果与kmeans类似</p>
+
+<h4 id="2主题数为10时技能主题分化">2.主题数为10时技能主题分化</h4>
+<p>当LDA提取的主题数设为10时，如图2所示，出现了两个专业技能主题，却略有不同，一个主题中出现的软件为python、java、hive、hadoop，还出现了算法、数据挖掘、机器学习等词，说明此类职位描述的对编程、对分布式、算法要求更高些，而另一个主题则只是要求应聘者会office办公软件，以及传统的sas、spss统计分析软件，也要求python。这说明数据分析岗仍可以往下细分为普通统计分析和偏向算法工程师、大数据方面的数据分析。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#LDA-------------------------------------------------------------------
+</span><span class="kn">from</span> <span class="nn">gensim</span> <span class="kn">import</span> <span class="n">corpora</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">gensim.models</span> <span class="kn">import</span> <span class="n">LdaModel</span>
+
+
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">"/Users/situ/Documents/EDA/final"</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">loadDataset</span><span class="p">(</span><span class="n">myfile</span><span class="p">):</span>
+    <span class="s">'''导入文本数据集'''</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">myfile</span><span class="p">,</span><span class="s">'r'</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"utf-8"</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+<span class="c1">#        print(line)
+</span>        <span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">dataset</span>
+
+
+<span class="n">clean_text4</span> <span class="o">=</span> <span class="n">loadDataset</span><span class="p">(</span><span class="s">"clean_text.txt"</span><span class="p">)</span>
+<span class="n">TEMP_FOLDER</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">'Folder "{}" will be used to save temporary dictionary and corpus.'</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">TEMP_FOLDER</span><span class="p">))</span>
+<span class="n">dictionary</span> <span class="o">=</span> <span class="n">corpora</span><span class="o">.</span><span class="n">Dictionary</span><span class="p">(</span><span class="n">clean_text4</span><span class="p">)</span>
+<span class="n">dictionary</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEMP_FOLDER</span><span class="p">,</span> <span class="s">'deerwester.dict'</span><span class="p">))</span>  <span class="c1"># store the dictionary, for future reference
+</span><span class="k">print</span><span class="p">(</span><span class="n">dictionary</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">dictionary</span><span class="o">.</span><span class="n">token2id</span><span class="p">)</span>
+<span class="n">corpus</span> <span class="o">=</span> <span class="p">[</span><span class="n">dictionary</span><span class="o">.</span><span class="n">doc2bow</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">clean_text4</span><span class="p">]</span>
+
+<span class="n">corpora</span><span class="o">.</span><span class="n">MmCorpus</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEMP_FOLDER</span><span class="p">,</span> <span class="s">'deerwester.mm'</span><span class="p">),</span> <span class="n">corpus</span><span class="p">)</span>  <span class="c1"># store to disk, for later use
+</span><span class="nb">len</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">'Number of unique tokens: </span><span class="si">%</span><span class="s">d'</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">dictionary</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">'Number of documents: </span><span class="si">%</span><span class="s">d'</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">corpus</span><span class="p">))</span>
+
+
+<span class="c1"># Set training parameters.
+</span><span class="n">num_topics</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="c1">#10 8
+</span><span class="n">chunksize</span> <span class="o">=</span> <span class="mi">2000</span>
+<span class="n">passes</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">iterations</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="n">eval_every</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># Don't evaluate model perplexity, takes too much time.
+</span>
+<span class="c1"># Make a index to word dictionary.
+</span><span class="n">temp</span> <span class="o">=</span> <span class="n">dictionary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># This is only to "load" the dictionary.
+</span><span class="n">id2word</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">id2token</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">LdaModel</span><span class="p">(</span><span class="n">corpus</span><span class="o">=</span><span class="n">corpus</span><span class="p">,</span> <span class="n">id2word</span><span class="o">=</span><span class="n">id2word</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span><span class="p">,</span> \
+                       <span class="n">alpha</span><span class="o">=</span><span class="s">'auto'</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="s">'auto'</span><span class="p">,</span> \
+                       <span class="n">iterations</span><span class="o">=</span><span class="n">iterations</span><span class="p">,</span> <span class="n">num_topics</span><span class="o">=</span><span class="n">num_topics</span><span class="p">,</span> \
+                       <span class="n">passes</span><span class="o">=</span><span class="n">passes</span><span class="p">,</span> <span class="n">eval_every</span><span class="o">=</span><span class="n">eval_every</span><span class="p">)</span>
+
+<span class="n">top_topics</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">top_topics</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Average topic coherence is the sum of topic coherences of all topics, divided by the number of topics.
+</span><span class="n">avg_topic_coherence</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">top_topics</span><span class="p">])</span> <span class="o">/</span> <span class="n">num_topics</span>
+<span class="k">print</span><span class="p">(</span><span class="s">'Average topic coherence: </span><span class="si">%.4</span><span class="s">f.'</span> <span class="o">%</span> <span class="n">avg_topic_coherence</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">top_topics</span><span class="p">)</span>
+
+
+<span class="n">model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>
+
+<span class="c1">#判断一个训练集文档属于哪个主题
+</span><span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="n">corpus</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Score: {}</span><span class="se">\t</span><span class="s"> Topic: {}"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="mi">10</span><span class="p">)))</span>
+    
+ 
+<span class="c1">#给训练集输出其属于不同主题概率   
+</span><span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="n">corpus</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
+    
+    
+    
+    
+<span class="c1">#判断一个测试集文档属于哪个主题
+#unseen_document = [" ".join(text_i) for text_i in clean_text4[130]]
+#unseen_document = " ".join(unseen_document)
+</span>    
+<span class="n">unseen_document</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">130</span><span class="p">]</span>
+<span class="s">"""
+还要对文档进行之前的文本预处理
+"""</span>
+
+
+<span class="n">bow_vector</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">doc2bow</span><span class="p">(</span><span class="n">unseen_document</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="n">bow_vector</span><span class="p">],</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Score: {}</span><span class="se">\t</span><span class="s"> Topic: {}"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="mi">10</span><span class="p">)))</span>
+
+<span class="c1">#给每个完整的分词后的文档生成不同主题的得分
+</span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">"data_with_wordseg.csv"</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"gbk"</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="n">lda_score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">num_topics</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"word_seg"</span><span class="p">])):</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"word_seg"</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">bow_vector</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">doc2bow</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="n">bow_vector</span><span class="p">],</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">lda_score</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">score</span>
+<span class="n">lda_score</span><span class="p">[:</span><span class="mi">5</span><span class="p">,:]</span>
+<span class="n">lda_score_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">lda_score</span><span class="p">,</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">"lda"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_topics</span><span class="p">)])</span>
+<span class="n">lda_score_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">data</span><span class="p">,</span> <span class="n">lda_score_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s">"data_with_lda_score.csv"</span><span class="p">,</span><span class="n">index</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"gbk"</span><span class="p">)</span>
+
+
+<span class="c1">#LDA visualization---------------------------------------------------
+</span>
+<span class="kn">import</span> <span class="nn">pyLDAvis</span>
+<span class="kn">import</span> <span class="nn">pyLDAvis.gensim</span>
+
+<span class="n">vis_wrapper</span> <span class="o">=</span> <span class="n">pyLDAvis</span><span class="o">.</span><span class="n">gensim</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">corpus</span><span class="p">,</span><span class="n">dictionary</span><span class="p">)</span>
+<span class="n">pyLDAvis</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">vis_wrapper</span><span class="p">)</span>
+<span class="n">pyLDAvis</span><span class="o">.</span><span class="n">save_html</span><span class="p">(</span><span class="n">vis_wrapper</span><span class="p">,</span><span class="s">"lda</span><span class="si">%</span><span class="s">dtopics.html"</span><span class="o">%</span><span class="n">num_topics</span><span class="p">)</span>
+
+
+<span class="c1">#pyLDAvis.enable_notebook()
+#pyLDAvis.prepare(mds='tsne', **movies_model_data)
+</span></code></pre></div></div>
+
+<p><img src="/assets/images/post_images/LDA.png" /></p>
+
+<h2 id="参考博客">参考博客：</h2>
+<p>描述统计参考：</p>
+
+<ul>
+  <li><a href="https://zhuanlan.zhihu.com/p/25704059">数据分析师挣多少钱？“黑”了招聘网站告诉你！</a></li>
+</ul>
+
+<p>模型参考：</p>
+
+<ul>
+  <li><a href="https://www.zhihu.com/question/39254526">利用python做LDA文本分析，该从哪里入手呢？</a></li>
+</ul>
+:ET
