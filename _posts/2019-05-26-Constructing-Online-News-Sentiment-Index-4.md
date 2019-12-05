@@ -1,9 +1,9 @@
 ---
-title: Constructing Online News Sentiment Index 4
+title: 用向量空间模型进行文本分类
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification]
+tags: [文本分类,NLP,deep-learning]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（四）<br>文本分类基准模型：向量空间模型</font>

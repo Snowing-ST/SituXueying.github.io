@@ -1,0 +1,195 @@
+I"��<font face="仿宋">基于深度学习文本分类的网络新闻情感指数编制（一）<br />如何爬取网络新闻</font>
+
+<h2 id="introduction"><center>Introduction</center></h2>
+<p>The Consumer Confidence Index is an indicator of the strength of consumer confidence. Since the first consumer confidence index was introduced in 1946, consumer confidence index surveys have often been conducted by means of telephone surveys or questionnaires. In recent years, the survey process has gradually led to some problems, such as the increase in the rate of refusal, and the proportion of elder interviewees is too large, which has a certain impact on the validity of the index. In addition to strengthen the quality control in the design and implementation of the index survey program, we can make a new interpretation of the problem through the big data mining method.</p>
+
+<p>With the rapid development of Internet technology, the Internet has replaced traditional paper media as the main channel for people to obtain and express opinions. The news reflects the public’s emotional life status to varying degrees, and people’s emotional state is also affected by network media to some extent. Following this intuitive logic, we attempts to construct a consumer confidence index based on online news texts by mining the emotional tendencies of consumers, thereby avoiding some problems in the traditional consumer confidence index survey, and it is timelier and thriftier. However, because there is no authoritative research to prove the direct connection between online news and consumer psychology and behavior, in order to avoid disputes, we refers to the consumer confidence index based on the online news as “Online News Sentiment Index”, which is not directly related to “consumers”, but can be used to measure the attitudes and opinions of consumers reflected in the news text.</p>
+
+<p>The paper starts from the six dimensions (economic development, employment status, price level, living conditions, housing purchase and investment). From Baidu News, we crawled 68,139 news articles related to consumer confidence of 2009.01 to 2018.06, thus obtaining the original text data of this article. First, 5,000 random stories are randomly sampled for each dimension, artificially labeled with “positive”, “neutral” and “negative”, and words in the text are represented as vectors through the word2vec method, using deep learning algorithm such as such as Convolutional Neural Network (CNN) and Recurrent Neural Network (RNN). The text classification algorithm classifies the remaining news, thereby obtaining news texts with emotional tags. Then take the ratio of the difference between the number of “positive” texts and the number of “negative” texts in a quarter as the quarterly index, and then combine the quarterly index into equal weights and add 100 points to get the quarterly Online News Sentiment Index. Then we compare the Online News Sentiment Index with the macroeconomic indicators and the traditional consumer confidence index to illustrate that the Online News Sentiment Index is highly correlated with traditional consumer confidence index, and is partial preemptive and complementary to some macroeconomic indicators. Finally, the Online News Sentiment Index and its sub-indexes are used as independent variables to predict traditional consumer confidence index by time series regression analysis, dynamic regression analysis, VAR and other multivariate time series analysis methods. The model is from simple to complex, which leads to prediction accuracy growing step by step.</p>
+
+<h2 id="main-step-1crawling-the-news-from-baidu-news-">Main step 1:<center>crawling the news from <a href="news.baidu.com">Baidu News</a> </center></h2>
+
+<h3 id="description">description:</h3>
+<ul>
+  <li>input: search key words and time range of news</li>
+  <li>output: news information in csv type</li>
+  <li>some key words of six dimensions</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>就业</th>
+      <th>投资</th>
+      <th>物价</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>就业率，失业率，就业形势，就业压力，就业前景，就业满意度，求职压力等</td>
+      <td>市场情绪，投资意愿，投资热情，投资情绪等</td>
+      <td>通胀预期，通胀压力，物价涨幅，居民物价，物价走势，物价指数，物价满意度等</td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th>生活状况</th>
+      <th>经济</th>
+      <th>购房</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>居民收入，居民幸福，消费意愿，居民消费支出，居民消费能力，生活满意度，居民生活质量等</td>
+      <td>经济形势，宏观经济，目前经济，中国经济前景，宏观经济数据，中国的经济发展态势，宏观经济运行等</td>
+      <td>楼市成交量，购房压力，购房成本，楼市热度，楼市前景，购房意愿，居民楼市信心，购房支出，房价满意度，房价预期等</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="code-explanation">code explanation</h3>
+
+<h4 id="1-the-entire-crawler-code-was-written-as-a-class-named-baidu_news">1. The entire crawler code was written as a class named <i>baidu_news</i>.</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># initial variables: 
+# search keyword,begin time,end time, browser header,crawl title and abstract of news or only title
+</span><span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">word</span><span class="p">,</span><span class="n">bt_ymd</span><span class="p">,</span><span class="n">et_ymd</span><span class="p">,</span><span class="n">headers</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">word</span> <span class="o">=</span> <span class="n">word</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">bt_ymd</span> <span class="o">=</span> <span class="n">bt_ymd</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">et_ymd</span> <span class="o">=</span> <span class="n">et_ymd</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s">"title"</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># an example 
+</span><span class="n">bt_ymd</span> <span class="o">=</span> <span class="s">"2018-07-01"</span>
+<span class="n">et_ymd</span> <span class="o">=</span> <span class="s">"2019-06-30"</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">'User-Agent'</span><span class="p">:</span><span class="s">'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36'</span><span class="p">,</span>
+    <span class="s">'Host'</span><span class="p">:</span><span class="s">'www.baidu.com'</span><span class="p">,</span>
+    <span class="s">'Cookie'</span><span class="p">:</span><span class="s">'BIDUPSID=7C2C739A7BA8C15B187303565C792CA0; PSTM=1509410172; BD_UPN=12314753; BAIDUID=70698648FD1C0D4909420893B868092B:FG=1; MCITY=-</span><span class="si">%3</span><span class="s">A; BDORZ=B490B5EBF6F3CD402E515D22BCDA1598; BDUSS=N5eGZLbWZ5eWNuSTc5TUpobUIxWXU3ZmpoQklSUGJNZ1R5cnIwLTd6LWdBRVJkRVFBQUFBJCQAAAAAAAAAAAEAAAA1izQO0sDIu9DS0MQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKBzHF2gcxxdZ1; pgv_pvi=166330368; ___wk_scode_token=Ct4MH</span><span class="si">%2</span><span class="s">FuNEgumb9NGCk8o1Aj</span><span class="si">%2</span><span class="s">BjCUcLU2ClmExi0Qz51M</span><span class="si">%3</span><span class="s">D; BD_CK_SAM=1; PSINO=7; BDRCVFR[PaHiFN6tims]=9xWipS8B-FspA7EnHc1QhPEUf; BDRCVFR[C0p6oIjvx-c]=mk3SLVN4HKm; BD_HOME=1; BDRCVFR[feWj1Vr5u3D]=I67x6TjHwwYf0; delPer=0; H_PS_PSSID=; sug=3; sugstore=1; ORIGIN=2; bdime=0; H_PS_645EC=f263</span><span class="si">%2</span><span class="s">FGdJfRrManRLCydAHWcUoMS0z2QF37c4uymvBok2x75KBHmMBsxhzWSqrwKXegg9lBNs; BDSVRTM=104'</span><span class="p">}</span>
+     <span class="c1">#初始化
+</span></code></pre></div></div>
+
+<h4 id="2-get-the-url-of-the-search-result-of-the-keyword">2. Get the url of the search result of the keyword</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlencode</span>
+
+<span class="k">def</span> <span class="nf">get_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">page</span><span class="p">):</span><span class="c1">#第几页
+</span>    <span class="n">bt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_ymd</span><span class="o">+</span><span class="s">" 00:00:00"</span>
+    <span class="n">et</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">et_ymd</span><span class="o">+</span><span class="s">" 00:00:00"</span>
+    <span class="n">bts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">bt</span><span class="p">,</span> <span class="s">"</span><span class="si">%</span><span class="s">Y-</span><span class="si">%</span><span class="s">m-</span><span class="si">%</span><span class="s">d </span><span class="si">%</span><span class="s">H:</span><span class="si">%</span><span class="s">M:</span><span class="si">%</span><span class="s">S"</span><span class="p">)))</span><span class="c1">#时间戳
+</span>    <span class="n">ets</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">et</span><span class="p">,</span> <span class="s">"</span><span class="si">%</span><span class="s">Y-</span><span class="si">%</span><span class="s">m-</span><span class="si">%</span><span class="s">d </span><span class="si">%</span><span class="s">H:</span><span class="si">%</span><span class="s">M:</span><span class="si">%</span><span class="s">S"</span><span class="p">)))</span>
+    
+    <span class="n">pn</span> <span class="o">=</span> <span class="mi">20</span><span class="o">*</span><span class="p">(</span><span class="n">page</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="c1"># 页码对应：0 20 40 60
+</span>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="o">==</span><span class="s">"news"</span><span class="p">:</span>
+        <span class="n">qword</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">({</span><span class="s">'word'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)})</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s">"http://news.baidu.com/ns?</span><span class="si">%</span><span class="s">s&amp;pn=</span><span class="si">%</span><span class="s">d&amp;cl=2&amp;ct=1&amp;tn=newsdy&amp;rn=20&amp;ie=utf-8&amp;bt=</span><span class="si">%</span><span class="s">d&amp;et=</span><span class="si">%</span><span class="s">d"</span><span class="o">%</span><span class="p">(</span><span class="n">qword</span><span class="p">,</span><span class="n">pn</span><span class="p">,</span><span class="n">bts</span><span class="p">,</span><span class="n">ets</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="o">==</span><span class="s">"title"</span><span class="p">:</span> 
+        <span class="n">qword</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">word</span>
+        <span class="c1">#url patern may have to be changed as the web page renew
+</span>        <span class="n">url</span> <span class="o">=</span> <span class="s">"https://www.baidu.com/s?tn=news&amp;rtt=1&amp;bsst=1&amp;cl=2&amp;wd="</span><span class="o">+</span><span class="n">qword</span><span class="o">+</span><span class="s">"&amp;medium=1&amp;gpc=stf</span><span class="si">%3</span><span class="s">D"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">bts</span><span class="p">)</span><span class="o">+</span><span class="s">"</span><span class="si">%2</span><span class="s">C"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ets</span><span class="p">)</span><span class="o">+</span><span class="s">"</span><span class="si">%7</span><span class="s">Cstftype</span><span class="si">%3</span><span class="s">D2&amp;pn="</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">pn</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">url</span>
+</code></pre></div></div>
+
+<h4 id="3-jump-to-the-obtained-urls-and-crawl-the-new-information">3. Jump to the obtained urls and crawl the new information</h4>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+
+<span class="k">def</span> <span class="nf">crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">word</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">word</span> <span class="o">=</span> <span class="n">word</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">is_nextpage</span><span class="o">=</span><span class="bp">True</span>
+    <span class="n">newsData</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">is_nextpage</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"--------------正在爬取【</span><span class="si">%</span><span class="s">s】第</span><span class="si">%</span><span class="s">d页新闻----------------"</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">word</span><span class="p">,</span><span class="n">i</span><span class="p">))</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_url</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status_code</span><span class="o">==</span><span class="mi">200</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">请求成功"</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">'utf-8'</span>
+        <span class="n">selector</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>  
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="o">==</span><span class="s">"news"</span><span class="p">:</span>
+
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">selector</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@class="result"]'</span><span class="p">):</span>
+    <span class="c1">#            item = selector.xpath('//*[@class="result"]')[0]
+</span>
+    <span class="c1"># news information includes news title,publish date,publish time and original web page 
+</span>
+                <span class="n">newsdict</span> <span class="o">=</span> <span class="p">{</span><span class="s">"title"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"date"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"time"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"source"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="s">"abstract"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"href"</span><span class="p">:[</span><span class="mi">0</span><span class="p">]}</span>
+                <span class="n">onenews</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">newsdict</span><span class="p">)</span>
+                
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h3/a'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">])</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"href"</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h3/a/@href'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'div'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"source"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"date"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"time"</span><span class="p">]</span><span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"abstract"</span><span class="p">]</span> <span class="o">=</span> <span class="s">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">3</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">())</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">newsData</span> <span class="o">=</span> <span class="n">newsData</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">onenews</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="o">==</span><span class="s">"title"</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">selector</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@class="result"]'</span><span class="p">):</span>
+<span class="c1">#                item = selector.xpath('//*[@class="result"]')[0]
+</span>                <span class="n">newsdict</span> <span class="o">=</span> <span class="p">{</span><span class="s">"title"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"date"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"time"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"source"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"href"</span><span class="p">:[</span><span class="mi">0</span><span class="p">]}</span>
+                <span class="n">onenews</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">newsdict</span><span class="p">)</span>
+                
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h3/a'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"href"</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h3/a/@href'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'div'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span>
+<span class="c1">#                print(info)
+</span>                <span class="c1">#如果新闻是今天发的，则会显示“X小时前”，则日期改成今天
+</span>                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r"小时前"</span><span class="p">,</span><span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="n">onenews</span><span class="p">[</span><span class="s">"source"</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">nowtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"</span><span class="si">%</span><span class="s">Y-</span><span class="si">%</span><span class="s">m-</span><span class="si">%</span><span class="s">d </span><span class="si">%</span><span class="s">H:</span><span class="si">%</span><span class="s">M:</span><span class="si">%</span><span class="s">S"</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">localtime</span><span class="p">())</span>
+                    <span class="n">onenews</span><span class="p">[</span><span class="s">"date"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"</span><span class="si">%</span><span class="s">s年</span><span class="si">%</span><span class="s">s月</span><span class="si">%</span><span class="s">s日"</span><span class="o">%</span><span class="nb">tuple</span><span class="p">((</span><span class="n">nowtime</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">"-"</span><span class="p">)))</span>
+                    <span class="n">onenews</span><span class="p">[</span><span class="s">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">nowtime</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">][:</span><span class="mi">5</span><span class="p">]</span><span class="c1">#只取分秒            
+</span>                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">onenews</span><span class="p">[</span><span class="s">"source"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"date"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"time"</span><span class="p">]</span><span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">newsData</span> <span class="o">=</span> <span class="n">newsData</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">onenews</span><span class="p">)</span>
+        <span class="n">page_info</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="page"]/a[@class="n"]/text()'</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">page_info</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">page_info</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">1</span> <span class="ow">and</span> <span class="s">"下一页&gt;"</span> <span class="ow">in</span> <span class="n">page_info</span><span class="p">:</span>
+            <span class="n">is_nextpage</span><span class="o">=</span><span class="bp">True</span>
+            <span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">is_nextpage</span><span class="o">=</span><span class="bp">False</span>
+    <span class="n">newsData</span><span class="p">[</span><span class="s">"keyword"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">word</span>
+    <span class="n">newsData</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">word</span><span class="o">+</span><span class="s">"_"</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_ymd</span><span class="o">+</span><span class="s">"_"</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">et_ymd</span><span class="o">+</span><span class="s">"_"</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="o">+</span><span class="s">".csv"</span><span class="p">,</span><span class="n">index</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"gb18030"</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<h4 id="4-loop-through-6-categories-of-news-and-parallelly-crawl-news-of-same-category">4. Loop through 6 categories of news, and parallelly crawl news of same category</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span> 
+
+<span class="n">keywords</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">"E:/graduate/Paper/code/keywords.csv"</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"gbk"</span><span class="p">)</span> 
+
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">):</span>
+    <span class="n">cl</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s">"class"</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+    <span class="n">para</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s">"keywords"</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">","</span><span class="p">)</span>
+    <span class="n">full_class_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">"E:/graduate/Paper/renew_data"</span><span class="p">,</span><span class="n">cl</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">)</span> 
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">full_class_name</span><span class="p">)</span>
+    
+<span class="c1"># we can also type the search keyword directly in the code
+#para = ["中国贫富差距"]
+</span>
+<span class="c1"># parallel        
+</span>    <span class="n">p</span><span class="o">=</span><span class="n">Pool</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="nb">map</span><span class="p">(</span><span class="n">baidu_news_crawl</span><span class="o">.</span><span class="n">crawl</span><span class="p">,</span><span class="n">para</span><span class="p">)</span>      
+    <span class="n">p</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">cl</span> <span class="o">+</span><span class="s">"新闻爬取完成，请打开【"</span><span class="o">+</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="o">+</span><span class="s">"】查看详情"</span><span class="p">)</span>
+
+</code></pre></div></div>
+<p>For more information about this project, please visit my <a href="https://github.com/Snowing-ST/Construction-and-Application-of-Online-News-Sentiment-Index">github</a>.</p>
+
+:ET

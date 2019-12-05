@@ -1,0 +1,128 @@
+I"�7<font face="仿宋">用xpath并行爬取在[新浪新闻](search.sina.com.cn)中用关键词搜索的新闻摘要及全文。</font>
+
+<ol>
+  <li>
+    <p><code class="highlighter-rouge">crawl</code>函数爬取搜索页面的元素：标题、发布日期及时间、摘要、链接、原网站名称</p>
+  </li>
+  <li>
+    <p>由于可能爬取内容为空，导致程序中断，因此遇到空内容则以“”代替</p>
+  </li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlencode</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="k">def</span> <span class="nf">crawl</span><span class="p">(</span><span class="n">para</span><span class="p">):</span>
+    <span class="n">compRawStr</span> <span class="o">=</span> <span class="n">para</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">startpage</span> <span class="o">=</span> <span class="n">para</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">para</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s">'q'</span><span class="p">:</span> <span class="n">compRawStr</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'gbk'</span><span class="p">)}</span>
+    <span class="n">word</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    <span class="n">newsData</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">startpage</span><span class="p">,</span><span class="n">startpage</span><span class="o">+</span><span class="n">n</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"--------------正在爬取第"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s">"页新闻----------------"</span><span class="p">)</span>
+<span class="c1">#        url = 'http://search.sina.com.cn/?%s&amp;range=all&amp;c=news&amp;sort=rel&amp;num=20&amp;col=1_7&amp;page=%s' % (word, str(i))
+</span>        <span class="c1">#按相关度排序，指定了时间范围
+</span>        <span class="n">url</span> <span class="o">=</span> <span class="s">"http://search.sina.com.cn/?c=news&amp;</span><span class="si">%</span><span class="s">s&amp;range=all&amp;time=custom&amp;stime=2018-04-16&amp;etime=2018-05-19&amp;num=10&amp;sort=rel&amp;page=</span><span class="si">%</span><span class="s">s"</span> <span class="o">%</span> <span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">'gbk'</span>
+        <span class="n">selector</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>  
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">selector</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'//*[@id="result"]/div/div'</span><span class="p">):</span>
+            <span class="n">newsdict</span> <span class="o">=</span> <span class="p">{</span><span class="s">"title"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"date"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"time"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"source"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="s">"abstract"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"detail"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"href"</span><span class="p">:[</span><span class="mi">0</span><span class="p">],</span><span class="s">"origin_url"</span><span class="p">:[</span><span class="mi">0</span><span class="p">]}</span>
+            <span class="n">onenews</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">newsdict</span><span class="p">)</span>
+<span class="c1">#            onenews = pd.DataFrame(np.zeros(8).tolist(),
+#                                   columns=["title","date","time","source","abstract","detail","href","orgin_url"])
+</span>            <span class="k">try</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h2/a'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="s">""</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">onenews</span><span class="p">[</span><span class="s">"title"</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"abstract"</span><span class="p">]</span>  <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'p'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">"string(.)"</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"abstract"</span><span class="p">]</span> <span class="o">=</span> <span class="s">""</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">otherinfo</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h2/span/text()'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">otherinfo</span> <span class="o">=</span> <span class="s">"NA NA NA"</span>
+            <span class="n">onenews</span><span class="p">[</span><span class="s">"source"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"date"</span><span class="p">]</span> <span class="p">,</span> <span class="n">onenews</span><span class="p">[</span><span class="s">"time"</span><span class="p">]</span>  <span class="o">=</span> <span class="n">otherinfo</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"href"</span><span class="p">]</span>  <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">'h2/a/@href'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">onenews</span><span class="p">[</span><span class="s">"href"</span><span class="p">]</span>  <span class="o">=</span> <span class="s">""</span>
+            <span class="n">onenews</span><span class="p">[</span><span class="s">"origin_url"</span><span class="p">]</span> <span class="p">,</span><span class="n">onenews</span><span class="p">[</span><span class="s">"detail"</span><span class="p">]</span> <span class="o">=</span> <span class="n">crawl_con</span><span class="p">(</span><span class="n">onenews</span><span class="p">[</span><span class="s">"href"</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">newsData</span> <span class="o">=</span> <span class="n">newsData</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">onenews</span><span class="p">)</span>
+    <span class="n">newsData</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">compRawStr</span><span class="o">+</span><span class="s">"_"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">startpage</span><span class="p">)</span><span class="o">+</span><span class="s">"_"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">+</span><span class="s">"相关新闻.csv"</span><span class="p">,</span><span class="n">index</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">"gb18030"</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<ol>
+  <li><code class="highlighter-rouge">crawl_con</code>函数在新闻详情页，爬取全文、原文链接，并嵌套进<code class="highlighter-rouge">crawl</code>函数中
+```python
+def crawl_con(href):
+ if href!=””:
+     site = requests.get(href)
+     site=site.content
+     response = etree.HTML(site)
+     try:
+         origin_url = response.xpath(‘//<em>[@id=”top_bar”]/div/div[2]/a/@href’)[0] 
+     except:
+         origin_url =””
+     detail = “\n”.join(response.xpath(‘//div[@class=”article”]/div/p/text()’))+<br />
+             “\n”.join(response.xpath(‘//div[@class=”article”]/p/text()’))+<br />
+             “\n”.join(response.xpath(‘//div[@class=”article”]/div/div/text()’))+<br />
+             “\n”.join(response.xpath(‘//</em>[@id=”artibody”]/p/text()’))
+     detail = re.sub(‘\u3000’, ‘’, detail)    #全角的空白符
+     return origin_url,detail
+ else:
+     return “”,””</li>
+</ol>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+4. 多个关键词并行爬取 
+```python
+def main():
+    os.chdir("")
+    print('请输入您想爬取内容的关键字：')
+    compRawStr = input('关键字1 关键字2： \n')     #键盘读入 多个关键字则用空格隔开
+    PageN = input('起始页,页数： \n')     #如键盘读入 1,5 1,5
+    print('正在爬取“' + compRawStr.capitalize()+ '”有关新闻!')
+    comp = compRawStr.split()
+    pn = PageN.split()
+    para = []
+    if (len(comp)==len(pn)) &amp; (len(comp)&gt;1):#多个关键词
+        l = len(comp) #多进程爬取不同搜索词新闻
+        for i in range(l):
+            para.append([comp[i]]+[int(c) for c in pn[i].split(",")])   
+            #[['中美贸易战', 1, 5], ['外交部', 1, 5]]
+#        crawl(comp[0]) #爬取成功会输出title
+        #crawl(['中美贸易战', 1, 5])
+    if (len(comp)==len(pn)) &amp; (len(comp)==1):#一个关键词，页面并行爬取
+        l=3
+        sp,n = [int(i) for i in pn[0].split(",")]
+        sep = int(round(n/l,0))
+        para = [[comp[0],sp,sep],[comp[0],sp+sep,sep],[comp[0],sp+2*sep,n-sp-2*sep]]
+    p=Pool(l)
+    p.map(crawl,para)       #爬取4页内容
+    p.close()
+    p.join()
+    print("爬取成功，请打开"+os.getcwd()+"查看详情")
+
+if __name__=='__main__':
+    main()
+</code></pre></div></div>
+
+<ol>
+  <li>可改写成类的形式，方便多次调用，参见<a href="https://github.com/Snowing-ST/Statistical-Case-Studies/blob/master/Lab6%20Scraping%20with%20xpath/TradeWarCrawl%20-%20class.py">TradeWarCrawl - class.py</a></li>
+</ol>
+
+<p>以上完整代码欢迎访问我的<a href="https://github.com/Snowing-ST/Statistical-Case-Studies/tree/master/Lab6%20Scraping%20with%20xpath">github</a>！</p>
+
+:ET

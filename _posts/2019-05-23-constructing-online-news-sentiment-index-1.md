@@ -1,18 +1,13 @@
 ---
-title: Constructing Online News Sentiment Index 1
+title: 如何爬取网络新闻
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification,crawl]
+tags: [爬虫,xpath,文本分类,NLP,deep-learning]
 ---
 
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（一）<br>如何爬取网络新闻</font>
-<style>
-    body {font-family: "华文中宋"}
-</style>
-
-<script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 
 ## <center>Introduction</center>
 The Consumer Confidence Index is an indicator of the strength of consumer confidence. Since the first consumer confidence index was introduced in 1946, consumer confidence index surveys have often been conducted by means of telephone surveys or questionnaires. In recent years, the survey process has gradually led to some problems, such as the increase in the rate of refusal, and the proportion of elder interviewees is too large, which has a certain impact on the validity of the index. In addition to strengthen the quality control in the design and implementation of the index survey program, we can make a new interpretation of the problem through the big data mining method.

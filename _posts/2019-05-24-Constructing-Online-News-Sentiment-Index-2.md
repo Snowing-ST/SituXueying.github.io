@@ -1,15 +1,12 @@
 ---
-title: Constructing Online News Sentiment Index 2
+title: 如何过滤无用新闻
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification]
+tags: [文本预处理,文本分类,NLP,deep-learning]
 ---
 
-<font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（二）<br>过滤无用新闻</font>
-<style>
-    body {font-family: "华文中宋"}
-</style>
+<font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（二）<br>如何过滤无用新闻</font>
 
 ## Main step 2:<center>delete useless news and then combine them</center>
 ### description:

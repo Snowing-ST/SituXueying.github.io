@@ -1,12 +1,12 @@
 ---
-title: Constructing Online News Sentiment Index 3
+title: 对爬取的新闻做文本预处理
 author: Situ
 layout: post
 categories: [big data]
-tags: [deep learning, text classification]
+tags: [文本预处理,文本分类,NLP,deep-learning]
 ---
 
-<font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（三）<br>文本预处理</font>
+<font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（三）<br>对爬取的新闻做文本预处理</font>
 <style>
     body {font-family: "华文中宋"}
 </style>

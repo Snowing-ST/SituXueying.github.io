@@ -1,9 +1,11 @@
 ---
-title: Invoice-Checking
+title: 半自动国税发票查验
 author: Situ
 layout: post
+categories: [work]
+tags: [工作实用]
 ---
-<font face="仿宋" >半自动国税发票查验，“半自动”指验证码还需手动填写o(╥﹏╥)o</font>
+<font face="仿宋" >“半自动”指验证码还需手动填写o(╥﹏╥)o</font>
 
 <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 

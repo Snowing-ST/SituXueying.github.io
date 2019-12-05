@@ -2,6 +2,7 @@
 layout: default
 ---
 {%- include header.html -%}
+<!--{% include post-tag.html %}-->
 
 <!-- Main -->
 <div id="main">
@@ -9,7 +10,8 @@ layout: default
 	<article class="shade-two">
 	  <div class="container">
 			<header>
-				<h2>{{- page.title -}}</h2>
+				<!--<h2>{{- page.title -}}</h2>-->
+				<h2 class="post-title" itemprop="name headline">{{ page.title }}</h2>{% include post-tag.html %}
 				<p>{% if page.author %}{{ page.author }}, {% endif %}{{- page.date | date_to_long_string -}}</p>
 				<link rel="stylesheet" href="{{ "assets/css/base16_solarized.css"| relative_url}}">
 			</header>

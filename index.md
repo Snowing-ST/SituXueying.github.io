@@ -3,7 +3,7 @@
 # Edit theme's home layout instead if you wanna make some changes
 # See: https://jekyllrb.com/docs/themes/#overriding-theme-defaults
 layout: home
-title: Situ's personal site
+title: Situ's Home Page
 icon: fa-home
 order: 1
 ---
