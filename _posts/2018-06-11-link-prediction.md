@@ -3,7 +3,7 @@ title: 基于相似度算法的facebook网络数据链路预测
 author: Situ
 layout: post
 categories: [big data]
-tags: [social network,link prediction]
+tags: [social network,link prediction,R语言]
 ---
 
 
