@@ -1,22 +1,36 @@
 ---
 title: Reading List
-subtitle: a list of books I read
+subtitle: a list of books I am/will be reading
 layout: "page"
 icon: fa-book
 order: 6
 ---
 
-I love books! Here are some I'm reading now:
+## 推荐书
+### 心理学
+1. 理查德·格里格/菲利普·津巴多： *《心理学与生活》*
+2. 罗纳德·B·阿德勒/拉塞尔·F·普罗科特：*《沟通的艺术》*
+3. 马歇尔·卢森堡：*《非暴力沟通》*
+4. 岸见一郎/古贺史健：*《被讨厌的勇气》*
+5. 岸见一郎/古贺史健：*《幸福的勇气》*
 
-1. Robert Burton: *The Anatomy of Melancholy*
-2. Robert Musil: *The Man Without Qualities*
-3. Kazuo Ishiguro: *The Unconsoled*
-4. Malcolm Lowry: *Under the Volcano*
-5. Virginia Woolf: *The Waves*
-6. James Joyce: *Finnegans Wake*
-7. Thomas Wolfe: *Look Homeward, Angel*
-8. William Thackeray: *Pendennis*
-9. Karl Marx: *Capital*
-10. James Woodforde: *The Diary of A Country Parson*
+### 历史学
+6. 斯塔夫里阿诺斯：*《全球通史》*
+7. 黄仁宇：*《万历十五年》*
 
-source: [The Guardian](https://www.theguardian.com/books/booksblog/2011/jan/04/best-boring-books)
+### 哲学：
+8. 欧文·M·柯匹/卡尔·科恩《逻辑学导论》
+
+## 推荐网课
+
+### 历史学
+1. 武汉大学：*《简明世界史》*（慕课）
+
+### 哲学
+2. 北京大学：*《逻辑导论》*（慕课）
+
+### 摄影
+3. 中国传媒大学：*《人像摄影》*（慕课）
+
+### 职场
+4. 秋叶职场：*《轻松手绘》*（网易云课堂）

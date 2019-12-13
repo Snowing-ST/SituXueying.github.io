@@ -3,7 +3,7 @@ title: 基于豆瓣电影演员合作网络的社区发现
 author: Situ
 layout: post
 categories: [big data]
-tags: [social network,link prediction]
+tags: [social network,community detection,R语言]
 ---
 
 
