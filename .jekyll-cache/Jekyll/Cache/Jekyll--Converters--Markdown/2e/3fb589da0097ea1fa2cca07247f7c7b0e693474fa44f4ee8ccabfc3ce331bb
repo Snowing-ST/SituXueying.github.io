@@ -1,0 +1,51 @@
+I"�<h2 id="python入门">Python入门</h2>
+<ul>
+  <li>函数</li>
+  <li>条件、循环</li>
+  <li>列表、字典、元组</li>
+  <li>推荐书：《像计算机科学家一样思考python》</li>
+</ul>
+
+<p><img src="/assets/images/post_images/think_python.png" /></p>
+
+<h2 id="python进阶">Python进阶</h2>
+<ul>
+  <li>Numpy——矢量计算</li>
+  <li>Pandas——数据分析</li>
+  <li>Matplotlib——可视化</li>
+  <li>推荐书：《利用python做数据分析》</li>
+</ul>
+
+<p><img src="/assets/images/post_images/python_data_analysis.jpg" /></p>
+
+<h2 id="从零开始学图像处理">从零开始学图像处理</h2>
+<h3 id="百度搜pythonopencv-xxx教程用pythonopencv做xxx">百度搜“python—opencv XXX教程”，“用python—opencv做XXX”</h3>
+<ul>
+  <li>内容最基础，最热门</li>
+  <li>代码容易复制</li>
+  <li>最短时间内了解图像处理、应用cv2</li>
+</ul>
+
+<h3 id="发现优秀参考书">发现优秀参考书</h3>
+<ul>
+  <li>系统学习、深入了解</li>
+  <li>了解算法背后的原理</li>
+  <li>联系的观点看待问题，尝试一题多解、一解多题</li>
+  <li>推荐书：《openCV3计算机视觉：python语言实现》、《OpenCV-Python Tutorials》</li>
+</ul>
+
+<p><img src="/assets/images/post_images/opencv3.png" /></p>
+
+<h3 id="勤做笔记常常练习">勤做笔记，常常练习</h3>
+
+<ul>
+  <li>多记，有备无患</li>
+  <li>多试，加深理解</li>
+  <li>多写，记在脑子里才算真的掌握</li>
+  <li>本人笔记已放<a href="https://github.com/Snowing-ST/cv2">github</a>，欢迎交流</li>
+</ul>
+
+<p><img src="/assets/images/post_images/opencv_notes.png" /></p>
+
+<p><img src="/assets/images/post_images/opencv_notes_1.png" /></p>
+:ET
