@@ -3,7 +3,7 @@ title: 半自动国税发票查验
 author: Situ
 layout: post
 categories: [work]
-tags: [工作实用]
+tags: [工作实用,爬虫]
 ---
 <font face="仿宋" >“半自动”指验证码还需手动填写o(╥﹏╥)o</font>
 

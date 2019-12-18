@@ -3,7 +3,7 @@ title: 零基础学python-opencv
 author: Situ
 layout: post
 categories: [work]
-tags: [工作实用]
+tags: [工作实用,图像处理]
 ---
 
 ## Python入门
