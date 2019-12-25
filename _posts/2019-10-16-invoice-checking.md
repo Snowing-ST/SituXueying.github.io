@@ -9,6 +9,7 @@ tags: [工作实用,爬虫]
 
 <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 
+## 1.0版本
 ### 代码步骤
 #### 1. 手动填写发票信息
 发票信息如发票代码、发票号码、发票时间、税前金额需先行填写在excel中，如[invoice_sample.xlsx](https://github.com/Snowing-ST/invoice_checking/blob/master/invoice_sample.xlsx)所示
@@ -144,6 +145,19 @@ pyinstaller -p C:/.../Anaconda2/envs/py3/Lib/site-packages -D invoice_checking.p
 
 当需要一次性查询大量发票时，该程序优势就显示出来啦~(*^▽^*)~
 
-获取完整代码请点击[此处](https://github.com/Snowing-ST/Invoice-Checking)。
+## 2.0版新特点
+- 可直接在python的console中输出验证码图片、提示性文字，以及输入验证码，提高效率
+- 识别“查验太频繁，请1分钟后再试”的问题，程序将等待一分钟后自动跳转
+- 截图时简化模拟鼠标滚动操作，鼠标仅模拟滑动至最上方
 
+## 3.0版新特点
+- 用tkinter包构建图形界面，打包成exe程序后方便不懂代码的人使用，如导入文件时可直接打开文件管理器选择文件，简单直观。
+- gui编程的设计思路为事件触发型，因此代码逻辑相比于2.0版本有重大修改，主要是：
+    - 1 把获取验证码和提交验证码分为两步； 
+    - 2 原2.0逐张验证发票使用for循环，3.0无明显循环的关键字，改为截图后重复一次查验过程，直到已查验发票数i与导入的excel文件中样本数相等； 
+    - 3 出错时不再需要while循环，遂删除
+    - 4 整个代码写成一个类的形式，大大方便了参数调用
 
+<img src="{{ 'assets/images/post_images/gui.png'| relative_url }}" /> 
+
+获取以上所有代码请点击[此处](https://github.com/Snowing-ST/Invoice-Checking)~(*^▽^*)~。
