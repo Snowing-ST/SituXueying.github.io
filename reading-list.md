@@ -24,13 +24,14 @@ order: 6
 ## 推荐网课
 
 ### 历史学
-1. 武汉大学：*《简明世界史》*（慕课）
+1. 武汉大学：[*《简明世界史》*(MOOC)](https://www.icourse163.org/learn/WHU-24001?tid=1206812201)
 
 ### 哲学
-2. 北京大学：*《逻辑导论》*（慕课）
+2. 北京大学：[*《逻辑导论》*(MOOC)](https://www.icourse163.org/learn/PKU-1206625831?tid=1206950286)
 
 ### 摄影
-3. 中国传媒大学：*《人像摄影》*（慕课）
+3. 中国传媒大学：[*《人像摄影》*(MOOC)](https://www.icourse163.org/learn/CUC-1205885807?tid=1206919211#/learn/announce)
+4. 电子科技大学：[*《摄影基础》*(MOOC)](https://www.icourse163.org/learn/UESTC-1001958013?tid=1003319002#/learn/announce)
 
 ### 职场
-4. 秋叶职场：*《轻松手绘》*（网易云课堂）
+5. 秋叶职场：[*《轻松手绘》*（网易云课堂）](https://study.163.com/course/courseMain.htm?courseId=1003373019&share=1&shareId=8182348)

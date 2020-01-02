@@ -3,7 +3,7 @@ title: 用CNN、RNN做文本分类
 author: Situ
 layout: post
 categories: [big data]
-tags: [文本分类,NLP,word2vec,deep-learning]
+tags: [文本分类,NLP,word2vec,deep-learning,Master Thesis]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（六）<br>深度学习文本分类模型之用CNN RNN做文本分类</font>

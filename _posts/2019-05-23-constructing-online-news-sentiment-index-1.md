@@ -3,7 +3,7 @@ title: 如何爬取网络新闻
 author: Situ
 layout: post
 categories: [big data]
-tags: [爬虫,xpath,文本分类,NLP,deep-learning]
+tags: [爬虫,xpath,文本分类,NLP,deep-learning,Master Thesis]
 ---
 
 

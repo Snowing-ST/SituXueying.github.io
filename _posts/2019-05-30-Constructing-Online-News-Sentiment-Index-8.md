@@ -3,7 +3,7 @@ title: 网络新闻情感指数的应用
 author: Situ
 layout: post
 categories: [big data]
-tags: [时间序列,文本分类,NLP,deep-learning,R语言]
+tags: [时间序列,文本分类,NLP,deep-learning,R语言,Master Thesis]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（七）<br>网络新闻情感指数的应用</font>

@@ -3,7 +3,7 @@ title: 基于有标签的新闻计算网络新闻情感指数
 author: Situ
 layout: post
 categories: [big data]
-tags: [文本分类,NLP,deep-learning]
+tags: [文本分类,NLP,deep-learning,Master Thesis]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（七）<br>基于有标签的新闻计算网络新闻情感指数</font>

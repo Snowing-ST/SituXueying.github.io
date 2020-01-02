@@ -3,7 +3,7 @@ title: 如何过滤无用新闻
 author: Situ
 layout: post
 categories: [big data]
-tags: [文本预处理,文本分类,NLP,deep-learning]
+tags: [文本预处理,文本分类,NLP,deep-learning,Master Thesis]
 ---
 
 <font face="仿宋" >基于深度学习文本分类的网络新闻情感指数编制（二）<br>如何过滤无用新闻</font>
