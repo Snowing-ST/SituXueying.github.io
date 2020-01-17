@@ -25,8 +25,10 @@ https://www.zhihu.com/question/32703639/answer/165326590)，这篇回答里提�
 - 先在腾讯云注册账号
 - 开通行业文档识别——表格识别
 - 在控制台-访问管理-访问密钥，新建密钥，填入代码中
-- 表格照片需清晰，不然容易变成乱码，有黑色边框时识别效果最好
+- 表格照片需清晰、平整，不然容易变成乱码、错位，有黑色边框时识别效果最好
 - 查询多张时容易遇到ClientNetworkError，原因不明，推荐一张一张查
+- 表格图片路径和名称不要有空格
+- 表格图片大小请勿超过2M！！！
 
 <img src="{{ 'assets/images/post_images/graph_sample.png'| relative_url }}" /> 
 <img src="{{ 'assets/images/post_images/graph_sample2.png'| relative_url }}" /> 
@@ -194,7 +196,7 @@ entry_filename2.grid(column=0, row=3)
 b2 = Button(window, text="开始识别",command=batch)
 b2.grid(column=1, row=3)
 
-tips = Label(window, text="注：图片名称中不允许有空格",font=("仿宋", 8))
+tips = Label(window, text="注：图片名称中不允许有空格；大小不超过2M",font=("仿宋", 8))
 tips.grid(column=0,row=4)
 
 window.mainloop()
