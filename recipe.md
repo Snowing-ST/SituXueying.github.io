@@ -2,7 +2,7 @@
 title: Recipe
 subtitle: 记录下自己做过的家常菜，方便看各种原料的用量及基本步骤，按拼音排序。
 layout: "page"
-icon: fa-cutlery
+icon: fa-coffee
 order: 7
 ---
 ————————————————————————————————————————————
