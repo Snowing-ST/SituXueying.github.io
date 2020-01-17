@@ -2,7 +2,7 @@
 title: Reading List
 subtitle: a list of books I am/will be reading
 layout: "page"
-icon: fa-book
+icon: fa-list
 order: 6
 ---
 
