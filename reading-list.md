@@ -1,6 +1,6 @@
 ---
 title: Reading List
-subtitle: a list of books I am/will be reading
+subtitle: 独居中年少女的自娱自乐
 layout: "page"
 icon: fa-list
 order: 6
