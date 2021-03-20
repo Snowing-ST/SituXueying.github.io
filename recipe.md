@@ -1,4 +1,4 @@
- ---
+---
 title: Recipe
 subtitle: 和舍友一起做饭的日子~
 layout: "page"
