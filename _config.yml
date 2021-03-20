@@ -31,7 +31,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 title: Situ Xueying
-subtitle: Master of Applied Statistics, 2019, CUFE
+subtitle: CUFE #Master of Applied Statistics, 2019, CUFE
 description: >- # this means to ignore newlines until "baseurl:"
   The world is so lonely as snow.
 author: Situ Xueying
